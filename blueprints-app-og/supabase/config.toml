@@ -1,0 +1,7 @@
+project_id = "ikpcmycxtleodpoojhao"
+
+[functions.chat-assistant]
+verify_jwt = false
+
+[functions.launch-companion]
+verify_jwt = true
