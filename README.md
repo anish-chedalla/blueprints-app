@@ -2,7 +2,7 @@
 
 > Find grants, match to loans, and track deadlines for Arizona small businesses. Your complete funding companion.
 
-## 🚀 Features
+## Features
 
 - **Grant & Loan Discovery**: Browse Arizona-specific funding programs
 - **AI-Powered Assistant**: Launch Companion helps guide you through business setup
@@ -11,7 +11,7 @@
 - **Profile Management**: Save favorites and track applications
 - **Smart Matching**: Filter programs by industry, location, and demographics
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: TailwindCSS + shadcn/ui components
@@ -20,7 +20,7 @@
 - **Routing**: React Router v6
 - **State**: TanStack Query
 
-## 📦 Installation
+## Installation
 
 1. **Clone the repository**
    ```bash
@@ -62,7 +62,7 @@
    
    App will be available at `http://localhost:8080`
 
-## 🌐 GitHub Pages Deployment
+## GitHub Pages Deployment
 
 ### Prerequisites
 
@@ -96,7 +96,7 @@ npm run deploy
 
 Your app will be live at: `https://anish-chedalla.github.io/blueprints-app/`
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 blueprints-app/
@@ -115,7 +115,7 @@ blueprints-app/
 
 ```
 
-## 🔐 Security Notes
+## Security Notes
 
 ⚠️ **Important**: The OpenAI API key in `.env` is exposed to the client. For production:
 - Use Supabase Edge Functions (already implemented) for AI calls
@@ -123,7 +123,7 @@ blueprints-app/
 - Rotate API keys regularly
 - Set usage limits on your OpenAI account
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Build Errors
 ```bash
@@ -142,7 +142,7 @@ npm install
 - Check Supabase dashboard for service status
 - Ensure CORS is enabled for your deployment domain
 
-## 📝 Scripts
+## Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
@@ -150,11 +150,11 @@ npm install
 - `npm run lint` - Run ESLint
 - `npm run deploy` - Build and deploy to GitHub Pages
 
-## 🤝 Contributing
+## Contributing
 
 This project was created for Arizona small businesses. Contributions welcome!
 
-## 📄 License
+## License
 
 MIT License - feel free to use this for your own projects
 
