@@ -25,7 +25,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename="/blueprints-app">
         <PageTransition>
           <Routes>
             <Route path="/" element={<Home />} />
