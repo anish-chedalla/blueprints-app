@@ -85,9 +85,9 @@ npm install
    supabase db push
    ```
    - This creates all tables, policies, and **seeds 36 funding programs**:
-     - ✅ 19 grants (state, local, and national)
-     - ✅ 17 loans (SBA, state, and local programs)
-     - ✅ Complete with realistic Arizona-specific opportunities
+     - 19 grants (state, local, and national)
+     - 17 loans (SBA, state, and local programs)
+     - Complete with realistic Arizona-specific opportunities
 
 #### **3.2 Manual Setup (Alternative)**
 
