@@ -2,7 +2,7 @@
 
 > Find grants, match to loans, and track deadlines for Arizona small businesses. Your complete funding companion.
 
-## 🚀 Features
+## Features
 
 - **Grant & Loan Discovery**: Browse Arizona-specific funding programs
 - **AI-Powered Assistant**: Launch Companion helps guide you through business setup
@@ -11,7 +11,7 @@
 - **Profile Management**: Save favorites and track applications
 - **Smart Matching**: Filter programs by industry, location, and demographics
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: TailwindCSS + shadcn/ui components
@@ -342,7 +342,7 @@ Your app will be live at: `https://your-username.github.io/blueprints-app/`
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 blueprints-app/
@@ -386,7 +386,7 @@ blueprints-app/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 This project was created for Arizona small businesses. Contributions are welcome!
 
@@ -398,7 +398,7 @@ This project was created for Arizona small businesses. Contributions are welcome
 
 ---
 
-## 📄 License
+## License
 
 MIT License - feel free to use this for your own projects.
 
