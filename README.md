@@ -22,7 +22,7 @@
 
 ---
 
-## 📦 Complete Development Setup
+## Complete Development Setup
 
 Follow these steps to get **EVERYTHING WORKING** locally.
 
@@ -134,7 +134,7 @@ If you prefer manual setup or CLI doesn't work:
 3. **Click "Create new secret key"**
 4. **Name it** `blueprints-app`
 5. **Copy the key** (starts with `sk-proj-...`)
-6. **⚠️ Save it immediately** - you can't view it again!
+6. **Save it immediately** - you can't view it again!
 
 **Set spending limits:**
 - Go to Settings → Billing → Set monthly budget ($5-10 is plenty for development)
@@ -198,13 +198,13 @@ npm run dev
 
 The app will start at: **`http://localhost:8081/blueprints-app/`**
 
-**⚠️ Important:** 
+**Important:** 
 - The URL **must include** `/blueprints-app/` at the end
 - Don't just go to `http://localhost:8081/`
 
 ---
 
-## ✅ Verify Everything Works
+## Verify Everything Works
 
 ### **Test Authentication**
 1. Go to `http://localhost:8081/blueprints-app/auth`
@@ -239,7 +239,7 @@ The app will start at: **`http://localhost:8081/blueprints-app/`**
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### **"Vite not found" error**
 ```bash
@@ -274,7 +274,7 @@ Vite will automatically use port 8081 or higher. Just use whatever port it shows
 
 ---
 
-## 🎯 Development Workflow
+## Development Workflow
 
 ### **Database Changes**
 ```bash
@@ -301,7 +301,7 @@ Just edit files - Vite hot reloads automatically!
 
 ---
 
-## 🌐 Production Deployment (GitHub Pages)
+## Production Deployment (GitHub Pages)
 
 Once your development environment is working, you can deploy to GitHub Pages.
 
@@ -363,9 +363,9 @@ blueprints-app/
 
 ---
 
-## 🔐 Security Notes
+## Security Notes
 
-⚠️ **Important Security Practices:**
+ **Important Security Practices:**
 
 - **Never commit `.env` files** - already in `.gitignore`
 - **Use Supabase Edge Functions** for AI calls (already implemented)
@@ -404,7 +404,7 @@ MIT License - feel free to use this for your own projects.
 
 ---
 
-## 📞 Support
+## Support
 
 **Having issues?**
 - Check the [Troubleshooting](#-troubleshooting) section
