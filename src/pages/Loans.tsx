@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isProgramAvailable } from "@/lib/program-availability";
 
 export default function Loans() {
   const [programs, setPrograms] = useState<any[]>([]);
@@ -70,7 +71,7 @@ export default function Loans() {
       if (error) throw error;
 
       // Filter by industry tags and demographics in memory (array contains)
-      let filtered = data || [];
+      let filtered = (data || []).filter((program) => isProgramAvailable(program));
       if (filters.industryTags.length > 0) {
         filtered = filtered.filter(p => 
           filters.industryTags.some(tag => p.industry_tags?.includes(tag))

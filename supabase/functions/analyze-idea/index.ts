@@ -1,6 +1,7 @@
 // deno run --allow-net --allow-env server.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { authenticateRequest, consumeAiQuota } from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,24 +14,47 @@ serve(async (req) => {
   }
 
   try {
-    const { businessIdea, industry, budget } = await req.json();
-    if (!businessIdea) throw new Error("Business idea is required");
-
-    // Environment variables
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error("Supabase credentials missing");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase credentials missing");
 
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const authentication = await authenticateRequest(req, supabase);
+    if (!authentication.user) {
+      return new Response(JSON.stringify({ error: authentication.error }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Fetch programs from your Supabase table
+    if (!await consumeAiQuota(supabase, authentication.user.id, "analyze-idea", 10)) {
+      return new Response(JSON.stringify({ error: "Hourly analysis limit reached" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { businessIdea, industry, budget } = await req.json();
+    if (typeof businessIdea !== "string" || !businessIdea.trim()) {
+      return new Response(JSON.stringify({ error: "Business idea is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (businessIdea.length > 4_000) {
+      return new Response(JSON.stringify({ error: "Business idea is too long" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: programs, error: dbError } = await supabase
       .from("programs")
       .select("*")
+      .neq("status", "CLOSED")
       .limit(50);
     if (dbError) throw dbError;
 

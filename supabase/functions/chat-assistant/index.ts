@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.1";
+import { authenticateRequest, consumeAiQuota } from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,11 +13,38 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
+    }
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Supabase credentials are not configured");
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const authentication = await authenticateRequest(req, supabase);
+    if (!authentication.user) {
+      return new Response(JSON.stringify({ error: authentication.error }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!await consumeAiQuota(supabase, authentication.user.id, "chat-assistant", 30)) {
+      return new Response(JSON.stringify({ error: "Hourly chat limit reached" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { messages } = await req.json();
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid messages" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const systemPrompt = `You are the Blueprints Assistant — an expert guide for Arizona small-business owners. 

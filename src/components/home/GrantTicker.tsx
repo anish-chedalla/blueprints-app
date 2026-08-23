@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { format } from "date-fns";
+import { isProgramAvailable } from "@/lib/program-availability";
 
 export const GrantTicker = () => {
   const { data: grants } = useQuery({
@@ -21,7 +22,7 @@ export const GrantTicker = () => {
         .limit(10);
 
       if (error) throw error;
-      return data;
+      return data?.filter((program) => isProgramAvailable(program)) ?? [];
     },
   });
 

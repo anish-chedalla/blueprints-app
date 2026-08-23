@@ -125,7 +125,7 @@ Check your `.env` file has:
 - [ ] `VITE_SUPABASE_URL` - Your project URL
 - [ ] `VITE_SUPABASE_PROJECT_ID` - Your project ID
 - [ ] `VITE_SUPABASE_PUBLISHABLE_KEY` - Your anon key
-- [ ] `VITE_OPENAI_API_KEY` - Your OpenAI key
+- [ ] `OPENAI_API_KEY` is configured only in Supabase Edge Function secrets
 
 ### **Database Setup**
 In Supabase Dashboard → SQL Editor, verify:

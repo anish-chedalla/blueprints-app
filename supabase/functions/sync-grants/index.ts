@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.1";
+import { authenticateRequest } from "../_shared/security.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,6 +102,20 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const authentication = await authenticateRequest(req, supabase);
+    if (!authentication.user) {
+      return new Response(JSON.stringify({ error: authentication.error }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (authentication.user.app_metadata?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Administrator access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Parse request body for scope parameter
     let scope: SyncScope = 'both';
     try {
@@ -115,6 +130,7 @@ serve(async (req) => {
     console.log(`Starting federal grant sync from Grants.gov API... Scope: ${scope}`);
 
     let recordsAffected = 0;
+    let recordsFailed = 0;
     const grants = [];
 
     // Fetch Arizona grants
@@ -161,21 +177,26 @@ serve(async (req) => {
 
     console.log(`Processing ${grants.length} total grants...`);
 
-    // Process each grant opportunity
+    const grantRows = [];
     for (const grant of grants) {
+      if (!grant.id) {
+        recordsFailed++;
+        continue;
+      }
       const oppStatus = (grant.oppStatus === 'posted' || grant.oppStatus === 'forecasted') ? 'OPEN' : 'CLOSED';
       const { min_amount, max_amount } = parseGrantAmount(grant);
       const industry_tags = parseIndustryTags(grant);
       const demographics = parseDemographics(grant);
 
       const grantData = {
+        source_id: `grants-gov:${grant.id}`,
         type: 'GRANT' as const,
-        level: 'FEDERAL' as const,
+        level: 'NATIONAL' as const,
         name: grant.title || 'Untitled Grant',
         sponsor: grant.agencyName || 'Unknown Agency',
         state: grant.scopeState,
         url: `https://www.grants.gov/web/grants/view-opportunity.html?oppId=${grant.id}`,
-        description: grant.description || grant.synopsis || null,
+        description: grant.description || grant.synopsis || 'See Grants.gov for full opportunity details.',
         industry_tags,
         demographics,
         min_amount,
@@ -185,36 +206,22 @@ serve(async (req) => {
         status: oppStatus as 'OPEN' | 'CLOSED',
       };
 
-      // Check if program already exists by URL
-      const { data: existingProgram } = await supabase
+      grantRows.push(grantData);
+    }
+
+    // Upsert bounded batches instead of making two serial database calls for
+    // every opportunity, which can exceed an Edge Function execution window.
+    for (let index = 0; index < grantRows.length; index += 100) {
+      const batch = grantRows.slice(index, index + 100);
+      const { error: upsertError } = await supabase
         .from('programs')
-        .select('id')
-        .eq('url', grantData.url)
-        .maybeSingle();
+        .upsert(batch, { onConflict: 'source_id' });
 
-      if (existingProgram) {
-        // Update existing program
-        const { error: updateError } = await supabase
-          .from('programs')
-          .update(grantData)
-          .eq('id', existingProgram.id);
-
-        if (updateError) {
-          console.error('Error updating grant:', updateError);
-        } else {
-          recordsAffected++;
-        }
+      if (upsertError) {
+        recordsFailed += batch.length;
+        console.error('Error upserting grant batch:', upsertError);
       } else {
-        // Insert new program
-        const { error: insertError } = await supabase
-          .from('programs')
-          .insert([grantData]);
-
-        if (insertError) {
-          console.error('Error inserting grant:', insertError);
-        } else {
-          recordsAffected++;
-        }
+        recordsAffected += batch.length;
       }
     }
 
@@ -226,7 +233,8 @@ serve(async (req) => {
       .insert([{
         sync_type: 'grants',
         records_synced: recordsAffected,
-        status: 'success',
+        status: recordsFailed > 0 ? 'partial' : 'success',
+        error_message: recordsFailed > 0 ? `${recordsFailed} records failed to sync` : null,
       }]);
 
     if (metadataError) {
@@ -244,10 +252,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: recordsFailed === 0,
         recordsSynced: recordsAffected,
+        recordsFailed,
         lastSynced: syncData?.last_synced,
-        message: `Successfully synced ${recordsAffected} grants (scope: ${scope})`,
+        message: recordsFailed === 0
+          ? `Successfully synced ${recordsAffected} grants (scope: ${scope})`
+          : `Synced ${recordsAffected} grants; ${recordsFailed} failed (scope: ${scope})`,
         scope,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

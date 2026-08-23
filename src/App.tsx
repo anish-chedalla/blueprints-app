@@ -3,41 +3,61 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import { PageTransition } from "@/components/PageTransition";
-import Home from "./pages/Home";
-import Grants from "./pages/Grants";
-import Loans from "./pages/Loans";
-import Dashboard from "./pages/Dashboard";
-import ProgramDetail from "./pages/ProgramDetail";
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import IdeaLab from "./pages/IdeaLab";
-import Assistant from "./pages/Assistant";
-import Saved from "./pages/Saved";
-import Licensing from "./pages/Licensing";
-import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ConfigurationError } from "@/components/ConfigurationError";
+import { missingSupabaseVariables } from "@/integrations/supabase/client";
+
+const Home = lazy(() => import("./pages/Home"));
+const Grants = lazy(() => import("./pages/Grants"));
+const Loans = lazy(() => import("./pages/Loans"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ProgramDetail = lazy(() => import("./pages/ProgramDetail"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const IdeaLab = lazy(() => import("./pages/IdeaLab"));
+const Assistant = lazy(() => import("./pages/Assistant"));
+const Saved = lazy(() => import("./pages/Saved"));
+const Licensing = lazy(() => import("./pages/Licensing"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => missingSupabaseVariables.length > 0 ? (
+  <ConfigurationError variables={missingSupabaseVariables} />
+) : (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter basename="/blueprints-app">
-        <PageTransition>
-          <Routes>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center" role="status" aria-label="Loading page">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        }>
+          <PageTransition>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/grants" element={<Grants />} />
             <Route path="/loans" element={<Loans />} />
-            <Route path="/idea-lab" element={<IdeaLab />} />
+            <Route path="/idea-lab" element={
+              <ProtectedRoute>
+                <IdeaLab />
+              </ProtectedRoute>
+            } />
             <Route path="/assistant" element={
               <ProtectedRoute>
                 <Assistant />
               </ProtectedRoute>
             } />
-            <Route path="/saved" element={<Saved />} />
+            <Route path="/saved" element={
+              <ProtectedRoute>
+                <Saved />
+              </ProtectedRoute>
+            } />
             <Route path="/licensing" element={
               <ProtectedRoute>
                 <Licensing />
@@ -52,8 +72,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </PageTransition>
+            </Routes>
+          </PageTransition>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

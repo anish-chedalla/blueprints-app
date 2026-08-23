@@ -7,6 +7,7 @@ import { Search, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isProgramAvailable } from "@/lib/program-availability";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ export default function Grants() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [canSync, setCanSync] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -126,7 +128,7 @@ export default function Grants() {
       if (error) throw error;
 
       // Filter by industry tags and demographics in memory (array contains)
-      let filtered = data || [];
+      let filtered = (data || []).filter((program) => isProgramAvailable(program));
       if (filters.industryTags.length > 0) {
         filtered = filtered.filter(p => 
           filters.industryTags.some(tag => p.industry_tags?.includes(tag))
@@ -149,6 +151,7 @@ export default function Grants() {
   const fetchFavorites = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    setCanSync(session.user.app_metadata?.role === "admin");
 
     const { data } = await supabase
       .from("favorites")
@@ -177,7 +180,7 @@ export default function Grants() {
                 </p>
               )}
             </div>
-            <DropdownMenu>
+            {canSync && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   disabled={syncing}
@@ -198,7 +201,7 @@ export default function Grants() {
                   Sync Both (AZ + National)
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
           </div>
           
           <div className="relative max-w-xl">

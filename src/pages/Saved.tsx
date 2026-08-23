@@ -6,7 +6,7 @@ import { Bookmark, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Saved() {
   const [grants, setGrants] = useState<any[]>([]);
@@ -99,9 +99,9 @@ export default function Saved() {
         Start exploring and save your favorite programs
       </p>
       <Button asChild>
-        <a href={type === "grants" ? "/grants" : "/loans"}>
+        <Link to={type === "grants" ? "/grants" : "/loans"}>
           Browse {type === "grants" ? "Grants" : "Loans"}
-        </a>
+        </Link>
       </Button>
     </div>
   );

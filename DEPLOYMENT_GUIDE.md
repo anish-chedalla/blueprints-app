@@ -42,9 +42,8 @@ Your app needs environment variables to work. Add these as GitHub secrets:
 | `VITE_SUPABASE_PROJECT_ID` | Your Supabase project ID | Your `.env` file or Supabase Dashboard |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Your Supabase anon/public key | Your `.env` file or Supabase Dashboard |
 | `VITE_SUPABASE_URL` | Your Supabase project URL | Your `.env` file or Supabase Dashboard |
-| `VITE_OPENAI_API_KEY` | Your OpenAI API key | Get from https://platform.openai.com/api-keys |
 
-**⚠️ Important**: These values are from your `.env` file but should NEVER be committed to git.
+**⚠️ Important**: These values are from your `.env` file but should NEVER be committed to git. Store `OPENAI_API_KEY` only as a Supabase Edge Function secret; never expose it as a `VITE_` variable.
 
 ---
 

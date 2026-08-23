@@ -210,6 +210,7 @@ export type Database = {
           name: string
           rolling: boolean | null
           secured: boolean | null
+          source_id: string | null
           sponsor: string
           state: string | null
           status: Database["public"]["Enums"]["program_status"] | null
@@ -235,6 +236,7 @@ export type Database = {
           name: string
           rolling?: boolean | null
           secured?: boolean | null
+          source_id?: string | null
           sponsor: string
           state?: string | null
           status?: Database["public"]["Enums"]["program_status"] | null
@@ -260,6 +262,7 @@ export type Database = {
           name?: string
           rolling?: boolean | null
           secured?: boolean | null
+          source_id?: string | null
           sponsor?: string
           state?: string | null
           status?: Database["public"]["Enums"]["program_status"] | null

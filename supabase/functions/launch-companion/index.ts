@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { authenticateRequest, consumeAiQuota } from "../_shared/security.ts";
+import { OpenAiSseAccumulator } from "../_shared/openai-stream.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,18 +55,35 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user } } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    const authentication = await authenticateRequest(req, supabase);
+    if (!authentication.user) {
+      return new Response(JSON.stringify({ error: authentication.error }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const user = authentication.user;
+
+    if (!await consumeAiQuota(supabase, user.id, "launch-companion", 30)) {
+      return new Response(JSON.stringify({ error: "Hourly chat limit reached" }), {
+        status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { messages, sessionId } = await req.json();
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return new Response(JSON.stringify({ error: "Invalid messages" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof sessionId !== "string" || !/^[0-9a-f-]{36}$/i.test(sessionId)) {
+      return new Response(JSON.stringify({ error: "Invalid session" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (messages.length > 0 && messages[messages.length - 1].role === "user") {
       await supabase.from("launch_companion_chats").insert({
@@ -134,78 +153,89 @@ serve(async (req) => {
       async start(controller) {
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
-        let fullResponse = "";
+        const accumulator = new OpenAiSseAccumulator();
+        let forwardBuffer = "";
+
+        const forwardCompleteLines = () => {
+          const lines = forwardBuffer.split("\n");
+          forwardBuffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (line.trim() === "data: [DONE]") continue;
+            controller.enqueue(new TextEncoder().encode(`${line}\n`));
+          }
+        };
 
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n").filter(line => line.trim() !== "");
-
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const delta = parsed.choices?.[0]?.delta;
-
-                if (delta?.content) fullResponse += delta.content;
-
-                if (delta?.tool_calls) {
-                  for (const toolCall of delta.tool_calls) {
-                    if (!toolCall.function?.arguments) continue;
-                    const args = JSON.parse(toolCall.function.arguments);
-                    if (toolCall.function.name === "update_phase") {
-                      const { data: currentProgress } = await supabase
-                        .from("launch_companion_progress")
-                        .select("completed_items")
-                        .eq("user_id", user.id)
-                        .eq("session_id", sessionId)
-                        .maybeSingle();
-
-                      const existingCompleted = currentProgress?.completed_items || [];
-                      const updatedCompleted = [...new Set([...existingCompleted, args.completed_phase])];
-
-                      const { error: progressError } = await supabase
-                        .from("launch_companion_progress")
-                        .upsert({
-                          user_id: user.id,
-                          session_id: sessionId,
-                          current_phase: args.phase,
-                          completed_items: updatedCompleted,
-                        }, { onConflict: "user_id,session_id" });
-
-                      if (!progressError) {
-                        const updateEvent = `data: ${JSON.stringify({
-                          type: "phase_update",
-                          phase: args.phase,
-                          completed: args.completed_phase,
-                        })}\n\n`;
-                        controller.enqueue(new TextEncoder().encode(updateEvent));
-                      }
-                    }
-                  }
-                }
-              } catch {
-                continue;
-              }
-            }
-
-            controller.enqueue(value);
+            const text = decoder.decode(value, { stream: true });
+            accumulator.push(text);
+            forwardBuffer += text;
+            forwardCompleteLines();
           }
 
-          if (fullResponse) {
+          const finalText = decoder.decode();
+          accumulator.push(finalText);
+          forwardBuffer += finalText;
+          forwardCompleteLines();
+          if (forwardBuffer && forwardBuffer.trim() !== "data: [DONE]") {
+            controller.enqueue(new TextEncoder().encode(`${forwardBuffer}\n`));
+          }
+          accumulator.finish();
+
+          for (const toolCall of accumulator.completedToolCalls) {
+            if (toolCall.name !== "update_phase") continue;
+
+            try {
+              const args = JSON.parse(toolCall.arguments);
+              const validPhases = ["plan", "register", "license", "finance", "operate"];
+              if (!validPhases.includes(args.phase) || !validPhases.includes(args.completed_phase)) {
+                continue;
+              }
+
+              const { data: currentProgress } = await supabase
+                .from("launch_companion_progress")
+                .select("completed_items")
+                .eq("user_id", user.id)
+                .eq("session_id", sessionId)
+                .maybeSingle();
+
+              const existingCompleted = currentProgress?.completed_items || [];
+              const updatedCompleted = [...new Set([...existingCompleted, args.completed_phase])];
+              const { error: progressError } = await supabase
+                .from("launch_companion_progress")
+                .upsert({
+                  user_id: user.id,
+                  session_id: sessionId,
+                  current_phase: args.phase,
+                  completed_items: updatedCompleted,
+                }, { onConflict: "user_id,session_id" });
+
+              if (!progressError) {
+                const updateEvent = `data: ${JSON.stringify({
+                  type: "phase_update",
+                  phase: args.phase,
+                  completed: args.completed_phase,
+                })}\n\n`;
+                controller.enqueue(new TextEncoder().encode(updateEvent));
+              }
+            } catch (error) {
+              console.error("Invalid update_phase tool call:", error);
+            }
+          }
+
+          if (accumulator.text) {
             await supabase.from("launch_companion_chats").insert({
               user_id: user.id,
               session_id: sessionId,
               role: "assistant",
-              content: fullResponse,
+              content: accumulator.text,
             });
           }
+
+          controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
 
           controller.close();
         } catch (error) {

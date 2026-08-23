@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Loader2, CheckCircle2, Circle, Rocket, Building2, FileText, DollarSign, TrendingUp, Lightbulb, Trash2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +30,7 @@ interface PhaseCard {
   id: string;
   title: string;
   description: string;
-  icon: any;
+  icon: LucideIcon;
   completed: boolean;
 }
 

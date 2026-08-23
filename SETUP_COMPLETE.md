@@ -9,7 +9,7 @@ Your Blueprints app is now **100% ready** for GitHub Pages deployment with OpenA
 ## 📝 Changes Made
 
 ### 1. **Environment Configuration**
-- ✅ Added `VITE_OPENAI_API_KEY` to `.env`
+- ✅ Configured `OPENAI_API_KEY` as a server-side Supabase secret
 - ✅ Created `.env.example` template
 - ✅ Updated `.gitignore` to protect sensitive files
 
@@ -68,7 +68,6 @@ Before deploying, complete these steps:
      VITE_SUPABASE_PROJECT_ID
      VITE_SUPABASE_PUBLISHABLE_KEY
      VITE_SUPABASE_URL
-     VITE_OPENAI_API_KEY
      ```
    - Copy values from your `.env` file
 

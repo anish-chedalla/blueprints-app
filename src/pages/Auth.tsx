@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
+import { appUrl } from "@/lib/github-pages";
 
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,6 +15,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const checkProfileComplete = async (userId: string) => {
     const { data } = await supabase
@@ -35,7 +37,7 @@ export default function Auth() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
+            emailRedirectTo: appUrl("onboarding"),
           },
         });
         if (error) throw error;
@@ -47,7 +49,12 @@ export default function Auth() {
         
         const isProfileComplete = await checkProfileComplete(data.user.id);
         toast.success("Signed in successfully");
-        navigate(isProfileComplete ? "/dashboard" : "/onboarding");
+        const requestedPath = typeof location.state?.from === "string"
+          && location.state.from.startsWith("/")
+          && !location.state.from.startsWith("//")
+          ? location.state.from
+          : "/dashboard";
+        navigate(isProfileComplete ? requestedPath : "/onboarding", { replace: true });
       }
     } catch (error: any) {
       toast.error(error.message);

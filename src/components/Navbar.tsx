@@ -1,18 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Building2, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import type { User } from "@supabase/supabase-js";
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   // Check auth state
-  useState(() => {
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
@@ -22,7 +23,7 @@ export const Navbar = () => {
     });
 
     return () => subscription.unsubscribe();
-  });
+  }, []);
 
   const isActive = (path: string) => location.pathname === path;
 

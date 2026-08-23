@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const location = useLocation();
 
   useEffect(() => {
     // Check initial session
@@ -32,7 +34,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
 
   return <>{children}</>;

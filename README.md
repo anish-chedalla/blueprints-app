@@ -155,10 +155,10 @@ If you prefer manual setup or CLI doesn't work:
    VITE_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
    VITE_SUPABASE_PROJECT_ID=YOUR_PROJECT_ID
    VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_ANON_KEY
-   
-   # Your OpenAI API key from Step 5
-   VITE_OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE
    ```
+
+   Keep the OpenAI key only in Supabase Edge Function secrets. Never use a
+   `VITE_` prefix for a private key because Vite exposes those values to the browser.
 
 3. **Find your Supabase values:**
    - Go to Supabase Dashboard → Settings → API
@@ -317,7 +317,11 @@ Once your development environment is working, you can deploy to GitHub Pages.
      - `VITE_SUPABASE_PROJECT_ID`
      - `VITE_SUPABASE_PUBLISHABLE_KEY`
      - `VITE_SUPABASE_URL`
-     - `VITE_OPENAI_API_KEY`
+     - `SUPABASE_ACCESS_TOKEN` (used by GitHub Actions to deploy migrations and Edge Functions)
+     - `SUPABASE_DB_PASSWORD` (the production project database password)
+
+   Without the two `SUPABASE_` deployment secrets, GitHub Pages still deploys
+   the frontend, but the workflow reports that backend deployment was skipped.
 
 3. **Update Supabase Auth URLs:**
    - Go to Supabase Dashboard → Authentication → URL Configuration

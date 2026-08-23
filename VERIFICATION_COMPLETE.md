@@ -304,7 +304,6 @@ If user **skips Step 7** (Edge Functions):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_PROJECT_ID`
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
-   - `VITE_OPENAI_API_KEY`
 4. ✅ **Deploy Edge Functions** (critical for AI features):
    ```bash
    supabase secrets set OPENAI_API_KEY=your-key
