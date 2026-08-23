@@ -31,6 +31,12 @@ test("browser deployment never receives an OpenAI secret", async () => {
   for (const file of files) assert.doesNotMatch(file, /VITE_OPENAI_API_KEY/);
 });
 
+test("GitHub Pages 404 carries deep links without browser storage", async () => {
+  const notFound = await read("public/404.html");
+  assert.match(notFound, /encodeURIComponent\(redirectPath\)/);
+  assert.doesNotMatch(notFound, /sessionStorage/);
+});
+
 test("the repair migration enables assistant reset and quotas", async () => {
   const migration = await read("supabase/migrations/20260823010000_secure_ai_and_repair_data.sql");
   assert.match(migration, /CREATE POLICY "Users can delete own chats"/);

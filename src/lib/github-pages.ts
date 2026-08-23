@@ -11,14 +11,17 @@ export function normalizeRedirectPath(path: string): string | null {
 }
 
 export function restoreGitHubPagesPath(): void {
-  const redirectPath = sessionStorage.getItem("redirectPath");
+  const redirectPath = redirectPathFromSearch(window.location.search);
   if (!redirectPath) return;
 
-  sessionStorage.removeItem("redirectPath");
   const normalized = normalizeRedirectPath(redirectPath);
   if (normalized) {
     history.replaceState(null, "", normalized);
   }
+}
+
+export function redirectPathFromSearch(search: string): string | null {
+  return new URLSearchParams(search).get("redirect");
 }
 
 export function appUrl(path: string): string {

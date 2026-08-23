@@ -6,9 +6,12 @@
   <title>Redirecting...</title>
   <script>
     // GitHub Pages SPA redirect workaround
-    // Store the path and redirect to index.html
-    sessionStorage.setItem('redirectPath', location.pathname + location.search + location.hash);
-    location.replace(location.origin + '/blueprints-app/');
+    // Carry the original path through the redirect. A query parameter is more
+    // reliable across GitHub Pages' separate 404 document.
+    const redirectPath = location.pathname + location.search + location.hash;
+    location.replace(
+      location.origin + '/blueprints-app/?redirect=' + encodeURIComponent(redirectPath)
+    );
   </script>
 </head>
 <body>
