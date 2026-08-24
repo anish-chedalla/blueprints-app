@@ -10,7 +10,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
-    "test": "node --experimental-strip-types --test tests/github-pages.test.mjs tests/openai-stream.test.mjs tests/program-availability.test.mjs tests/security-regressions.test.mjs",
+    "test": "node --experimental-strip-types --test tests/auth-ux.test.mjs tests/github-pages.test.mjs tests/openai-stream.test.mjs tests/program-availability.test.mjs tests/security-regressions.test.mjs",
     "preview": "vite preview",
     "deploy": "npm run build && gh-pages -d dist"
   },
