@@ -47,6 +47,9 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
 
+      - name: Disable Jekyll processing
+        run: touch dist/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
