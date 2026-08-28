@@ -4,7 +4,8 @@
 
 ## Features
 
-- **Grant & Loan Discovery**: Browse Arizona-specific funding programs
+- **Live Federal Grant Search**: Search the full public Grants.gov opportunity catalog with pagination and filters
+- **Grant & Loan Discovery**: Browse curated Arizona-specific funding programs
 - **AI-Powered Assistant**: Launch Companion helps guide you through business setup
 - **Idea Lab**: Analyze business ideas with AI recommendations
 - **Licensing Checklist**: Track required permits and licenses
@@ -19,6 +20,40 @@
 - **AI**: OpenAI GPT-4o-mini via Supabase Edge Functions
 - **Routing**: React Router v6
 - **State**: TanStack Query
+
+## Federal Grant Data Integration
+
+The Grant Finder uses the official, no-key-required Grants.gov REST API as its
+primary live catalog:
+
+- `POST https://api.grants.gov/v1/api/search2` for keyword, eligibility,
+  category, agency, status, instrument, and paginated searches
+- `POST https://api.grants.gov/v1/api/fetchOpportunity` for a complete
+  opportunity record
+
+Search results are requested directly by the browser using a CORS-safelisted
+`text/plain` request containing JSON. This matters because Grants.gov accepts
+the JSON payload and returns CORS headers, but its `OPTIONS` handler currently
+rejects browser preflight requests. No API key, proxy, or private credential is
+shipped to the frontend.
+
+The app normalizes and displays these decision-critical fields:
+
+- Stable Grants.gov opportunity ID and opportunity number
+- Title, agency, agency code, status, and opportunity category
+- Posted, closing, and archive dates
+- Award floor, ceiling, estimated total funding, and expected award count
+- Applicant types and detailed eligibility notes
+- Funding instrument and funding activity categories
+- Assistance Listing (ALN/CFDA) numbers and program titles
+- Cost-sharing requirement and agency contact details
+- Official Grants.gov and agency-announcement links
+
+Curated Arizona records remain in Supabase as a complementary local dataset.
+The admin-only `sync-grants` function can cache federal search records in that
+table, but the public live search does not depend on a sync being run. Because
+the official API provides both broad search and detailed records, no scraper is
+currently necessary.
 
 ---
 

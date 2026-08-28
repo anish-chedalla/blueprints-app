@@ -15,6 +15,7 @@ const Grants = lazy(() => import("./pages/Grants"));
 const Loans = lazy(() => import("./pages/Loans"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProgramDetail = lazy(() => import("./pages/ProgramDetail"));
+const FederalGrantDetail = lazy(() => import("./pages/FederalGrantDetail"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const IdeaLab = lazy(() => import("./pages/IdeaLab"));
@@ -69,6 +70,7 @@ const App = () => missingSupabaseVariables.length > 0 ? (
               </ProtectedRoute>
             } />
             <Route path="/program/:id" element={<ProgramDetail />} />
+            <Route path="/federal-grant/:id" element={<FederalGrantDetail />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<NotFound />} />

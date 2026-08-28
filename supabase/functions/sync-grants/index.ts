@@ -11,9 +11,11 @@ type SyncScope = 'arizona' | 'national' | 'both';
 
 interface GrantAPIRequest {
   rows: number;
+  startRecordNum?: number;
   keyword?: string;
   oppStatuses: string;
   fundingCategories?: string;
+  fundingInstruments?: string;
   agencies?: string;
   eligibilities?: string;
 }
@@ -35,7 +37,20 @@ async function fetchGrantsFromAPI(requestBody: GrantAPIRequest) {
     throw new Error(`Grants.gov API error: ${response.status} ${response.statusText}`);
   }
 
-  return await response.json();
+  const payload = await response.json();
+  if (payload?.errorcode !== 0 || !payload?.data) {
+    throw new Error(payload?.msg || 'Grants.gov returned an invalid response');
+  }
+
+  // Grants.gov wraps search results in a top-level `data` object.
+  return payload.data;
+}
+
+function parseApiDate(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  return `${match[3]}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}T12:00:00.000Z`;
 }
 
 function parseGrantAmount(oppHit: any): { min_amount: number | null, max_amount: number | null } {
@@ -138,8 +153,10 @@ serve(async (req) => {
       console.log('Fetching Arizona-specific grants...');
       const azRequestBody: GrantAPIRequest = {
         rows: 500,
+        startRecordNum: 0,
         keyword: 'Arizona',
         oppStatuses: 'posted|forecasted',
+        fundingInstruments: 'G',
       };
 
       const azData = await fetchGrantsFromAPI(azRequestBody);
@@ -157,8 +174,10 @@ serve(async (req) => {
       console.log('Fetching nationally available grants...');
       const nationalRequestBody: GrantAPIRequest = {
         rows: 500,
+        startRecordNum: 0,
         oppStatuses: 'posted|forecasted',
-        eligibilities: '25',
+        eligibilities: '23|99',
+        fundingInstruments: 'G',
       };
 
       const nationalData = await fetchGrantsFromAPI(nationalRequestBody);
@@ -193,15 +212,15 @@ serve(async (req) => {
         type: 'GRANT' as const,
         level: 'NATIONAL' as const,
         name: grant.title || 'Untitled Grant',
-        sponsor: grant.agencyName || 'Unknown Agency',
+        sponsor: grant.agency || grant.agencyName || 'Unknown Agency',
         state: grant.scopeState,
-        url: `https://www.grants.gov/web/grants/view-opportunity.html?oppId=${grant.id}`,
+        url: `https://www.grants.gov/search-results-detail/${grant.id}`,
         description: grant.description || grant.synopsis || 'See Grants.gov for full opportunity details.',
         industry_tags,
         demographics,
         min_amount,
         max_amount,
-        deadline: grant.closeDate ? new Date(grant.closeDate).toISOString() : null,
+        deadline: parseApiDate(grant.closeDate),
         rolling: false,
         status: oppStatus as 'OPEN' | 'CLOSED',
       };
