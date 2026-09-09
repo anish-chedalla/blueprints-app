@@ -1,16 +1,16 @@
 # Blueprints - Arizona Small Business Funding App
 
-> Find grants, match to loans, and track deadlines for Arizona small businesses. Your complete funding companion.
+> Search live federal grants and reviewed funder opportunities, understand eligibility, and track the strongest matches.
 
 ## Features
 
-- **Live Federal Grant Search**: Search the full public Grants.gov opportunity catalog with pagination and filters
-- **Grant & Loan Discovery**: Browse curated Arizona-specific funding programs
-- **AI-Powered Assistant**: Launch Companion helps guide you through business setup
-- **Idea Lab**: Analyze business ideas with AI recommendations
-- **Licensing Checklist**: Track required permits and licenses
-- **Profile Management**: Save favorites and track applications
-- **Smart Matching**: Filter programs by industry, location, and demographics
+- **Unified Grant Search**: Search live Grants.gov results and reviewed funder opportunities in one result set
+- **Explainable Eligibility**: See likely matches, possible conflicts, missing profile facts, and the reason behind each score
+- **Source Provenance**: Every normalized record carries its source, official URL, verification method, and last-reviewed time
+- **Funding Pipeline**: Save live federal and reviewed opportunities and track them from research through award or decline
+- **Saved Searches & Reminders**: Persist exact criteria, schedule in-app reminders, and optionally send email through the alert worker
+- **Arizona Coverage Registry**: Distinguish live APIs from official pages that require human review
+- **Secondary Loan Directory**: Browse curated loan programs without distracting from grant discovery
 
 ## Tech Stack
 
@@ -49,11 +49,32 @@ The app normalizes and displays these decision-critical fields:
 - Cost-sharing requirement and agency contact details
 - Official Grants.gov and agency-announcement links
 
-Curated Arizona records remain in Supabase as a complementary local dataset.
+Reviewed funder records remain in Supabase as a complementary dataset, with an Arizona-first emphasis.
 The admin-only `sync-grants` function can cache federal search records in that
 table, but the public live search does not depend on a sync being run. Because
 the official API provides both broad search and detailed records, no scraper is
 currently necessary.
+
+## Source and eligibility model
+
+`20260908010000_unify_grant_discovery.sql` adds the source-aware discovery model:
+
+- `grant_sources` publishes the current coverage boundary and whether a source is automated
+- provenance and structured eligibility fields extend curated `programs`
+- `saved_opportunities` stores a normalized snapshot of either a live federal record or curated record
+- `saved_searches` records exact filters and known result IDs for change detection
+- `opportunity_reminders` powers due reminders and optional email delivery
+
+The deterministic eligibility engine checks organization type, Arizona/city/county restrictions,
+employee and revenue limits, demographics, and industry overlap. It deliberately reports missing
+information instead of treating an AI guess as eligibility advice. Final eligibility always comes
+from the linked funder announcement.
+
+The coverage registry currently includes Grants.gov, Arizona Commerce Authority, Arizona Commission
+on the Arts, Arizona Department of Administration/eCivis, Arizona Department of Agriculture,
+Arizona Office of Economic Opportunity, SBA validation guidance, and the NASE Growth Grant.
+Only Grants.gov is queried live. Other sources are plainly labeled as funder-page reviews, and
+NASE's paid-membership eligibility requirement is shown before the user follows the application link.
 
 ---
 
@@ -119,10 +140,7 @@ npm install
    ```bash
    supabase db push
    ```
-   - This creates all tables, policies, and **seeds 36 funding programs**:
-     - 19 grants (state, local, and national)
-     - 17 loans (SBA, state, and local programs)
-     - Complete with realistic Arizona-specific opportunities
+   - This creates the current schema, source registry, user pipeline, and reviewed seed records.
 
 #### **3.2 Manual Setup (Alternative)**
 
@@ -136,7 +154,11 @@ If you prefer manual setup or CLI doesn't work:
    - `20251021024338_*.sql` - Sets up cron jobs
    - `20251026013316_*.sql` - Adds Launch Companion tables
    - `20251029180000_*.sql` - **Adds 32 more grant and loan programs**
-4. **Important:** Run ALL migration files to get the complete dataset
+   - `20260823010000_*.sql` - Secures AI and sync functions and repairs stale records
+   - `20260827010000_*.sql` - Adds currently verified Arizona opportunities
+   - `20260908010000_*.sql` - Adds unified saves, searches, reminders, provenance, eligibility, sources, and AZ FAST rounds
+4. **Important:** Run all migration files to get the current schema. The source registry documents
+   the actual coverage boundary; this project intentionally does not claim a complete grant dataset.
 
 ---
 
@@ -203,9 +225,11 @@ If you prefer manual setup or CLI doesn't work:
 
 ---
 
-### **Step 7: Deploy Supabase Edge Functions (AI Features)**
+### **Step 7: Deploy Supabase Edge Functions**
 
-The AI features (Launch Companion, Idea Lab) use Supabase Edge Functions.
+Grant discovery and eligibility scoring do not require AI. Grant email delivery uses the separate
+`process-alerts` worker. The older assistant functions are optional legacy features and are not in
+the primary navigation.
 
 1. **Set OpenAI key as a secret in Supabase:**
    ```bash
@@ -214,12 +238,26 @@ The AI features (Launch Companion, Idea Lab) use Supabase Edge Functions.
    
    Or via Dashboard → Edge Functions → Secrets
 
-2. **Deploy the functions:**
+2. **Deploy the grant-alert function:**
    ```bash
-   supabase functions deploy chat-assistant
-   supabase functions deploy analyze-idea
-   supabase functions deploy launch-companion
+   supabase functions deploy process-alerts
    ```
+
+   Deploy `chat-assistant`, `analyze-idea`, or `launch-companion` separately only if you intentionally
+   expose those legacy routes.
+
+3. **Optional email alerts:** configure a verified sender with Resend and protect the scheduled worker:
+   ```bash
+   supabase secrets set RESEND_API_KEY=your-resend-key
+   supabase secrets set ALERT_FROM_EMAIL="Blueprints <alerts@your-domain.example>"
+   supabase secrets set ALERT_CRON_SECRET=a-long-random-secret
+   ```
+
+   Schedule an authenticated `POST` to `/functions/v1/process-alerts` with the Supabase service-role
+   bearer token and the same secret in `x-alert-cron-secret`. The worker sends due reminders, checks
+   opted-in saved searches against both live federal results and the current Arizona catalog, emails
+   only newly observed matches, and records delivery timestamps. If Resend is not configured, in-app
+   reminders and saved searches continue to work without pretending an email was sent.
 
 **Alternative:** Functions auto-deploy when you push to GitHub if you have GitHub Actions set up.
 
@@ -249,22 +287,18 @@ The app will start at: **`http://localhost:8081/blueprints-app/`**
 
 ### **Test Database**
 1. Go to `http://localhost:8081/blueprints-app/grants`
-2. You should see **19 grant programs** including:
-   - State grants (Arizona Innovation Challenge, AZ Main Street, etc.)
-   - Local grants (Phoenix, Scottsdale, Mesa, Tucson, etc.)
-   - National grants (SBIR, STTR, USDA, Minority/Women/Veteran programs)
+2. You should see live federal results and currently available reviewed Arizona records in one result set.
 3. Go to `/loans` - you should see **17 loan programs** including:
    - State loans (AZ Small Business Loan, Women Business Loan, etc.)
    - Local loans (Phoenix, Mesa, Tucson area loans)
    - National loans (SBA 7(a), SBA 504, SBA Microloans, etc.)
-4. **Total: 36 funding programs** fully populated and ready to explore
+4. Open the Coverage & Sources tab and confirm live versus reviewed sources are clearly labeled.
 
-### **Test AI Features**
-1. Sign in and go to `/idea-lab`
-2. Enter a business idea
-3. Click "Analyze Idea" - should get AI response
-4. Go to `/assistant` (Launch Companion)
-5. Ask a question - should get AI response
+### **Test Matching and Alerts**
+1. Sign in and go to `/idea-lab` to review your deterministic match profile.
+2. Open `/grants`, save one federal and one Arizona opportunity, and confirm both appear in `/saved`.
+3. Change their pipeline stages and create a near-term in-app reminder.
+4. Save a search, then confirm its email preference appears in the Alerts tab.
 
 ### **Test User Features**
 1. Click the heart icon on any program to save it

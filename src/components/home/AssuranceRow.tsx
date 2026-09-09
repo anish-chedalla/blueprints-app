@@ -5,18 +5,18 @@ export const AssuranceRow = () => {
   const assurances = [
     {
       icon: Shield,
-      title: "Official sources only",
-      description: "We index verified government programs",
+      title: "Funder-owned records",
+      description: "Every listing points to an official agency or funder page",
     },
     {
       icon: Calendar,
-      title: "Real deadlines, verified daily",
-      description: "Automated updates keep info current",
+      title: "Visible verification dates",
+      description: "Live API records and reviewed sources are clearly labeled",
     },
     {
       icon: Link,
-      title: "No pay to play",
-      description: "All opportunities are free to apply",
+      title: "No sponsored ranking",
+      description: "Fit scores come from your profile, never referral payments",
     },
   ];
 

@@ -4,30 +4,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar as CalendarIcon, DollarSign, ExternalLink, Heart, MapPin, Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
+import type { Tables } from "@/integrations/supabase/types";
+import { evaluateEligibility } from "@/lib/eligibility";
+import { curatedProgramToOpportunity, serializeOpportunity } from "@/lib/opportunities";
+
+type Program = Tables<"programs">;
 
 export default function ProgramDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [program, setProgram] = useState<any>(null);
+  const [program, setProgram] = useState<Program | null>(null);
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reminderDate, setReminderDate] = useState<Date>();
 
-  useEffect(() => {
-    if (id) {
-      fetchProgram();
-      checkFavorite();
-    }
-  }, [id]);
-
-  const fetchProgram = async () => {
+  const fetchProgram = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("programs")
@@ -37,27 +36,35 @@ export default function ProgramDetail() {
 
       if (error) throw error;
       setProgram(data);
-    } catch (error) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: profileData } = await supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle();
+        setProfile(profileData || null);
+      }
+    } catch {
       toast.error("Failed to load program");
       navigate("/");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
-  const checkFavorite = async () => {
+  const checkFavorite = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const { data } = await supabase
-      .from("favorites")
-      .select("id")
-      .eq("user_id", session.user.id)
-      .eq("program_id", id)
-      .maybeSingle();
+    const { data } = await supabase.from("saved_opportunities").select("id")
+      .eq("user_id", session.user.id).eq("program_id", id).maybeSingle();
 
     setIsFavorite(!!data);
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      void fetchProgram();
+      void checkFavorite();
+    }
+  }, [checkFavorite, fetchProgram, id]);
 
   const handleFavorite = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -68,26 +75,24 @@ export default function ProgramDetail() {
     }
 
     try {
+      if (!program) return;
       if (isFavorite) {
-        const { error } = await supabase
-          .from("favorites")
-          .delete()
-          .eq("user_id", session.user.id)
-          .eq("program_id", id);
+        const { error } = await supabase.from("saved_opportunities").delete()
+          .eq("user_id", session.user.id).eq("program_id", id);
 
         if (error) throw error;
         toast.success("Removed from favorites");
         setIsFavorite(false);
       } else {
-        const { error } = await supabase
-          .from("favorites")
-          .insert({ user_id: session.user.id, program_id: id });
+        const { error } = await supabase.from("saved_opportunities").insert({
+          ...serializeOpportunity(curatedProgramToOpportunity(program)), user_id: session.user.id,
+        });
 
         if (error) throw error;
         toast.success("Added to favorites");
         setIsFavorite(true);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update favorites");
     }
   };
@@ -106,18 +111,23 @@ export default function ProgramDetail() {
     }
 
     try {
-      const { error } = await supabase
-        .from("reminders")
-        .insert({ 
-          user_id: session.user.id, 
-          program_id: id, 
-          remind_at: reminderDate.toISOString() 
-        });
+      if (!program) return;
+      const serialized = serializeOpportunity(curatedProgramToOpportunity(program));
+      const { data: savedRow, error: saveError } = await supabase.from("saved_opportunities").upsert({
+        ...serialized, user_id: session.user.id,
+      }, { onConflict: "user_id,source,external_id" }).select("id").single();
+      if (saveError) throw saveError;
+      const { error } = await supabase.from("opportunity_reminders").insert({
+        user_id: session.user.id,
+        saved_opportunity_id: savedRow.id,
+        remind_at: reminderDate.toISOString(),
+        delivery_channels: ["in_app"],
+      });
 
       if (error) throw error;
       toast.success("Reminder set successfully");
       setReminderDate(undefined);
-    } catch (error) {
+    } catch {
       toast.error("Failed to set reminder");
     }
   };
@@ -134,6 +144,9 @@ export default function ProgramDetail() {
   }
 
   if (!program) return null;
+
+  const opportunity = curatedProgramToOpportunity(program);
+  const eligibility = evaluateEligibility(profile, opportunity);
 
   const formatAmount = (min?: number, max?: number) => {
     if (!min && !max) return null;
@@ -248,6 +261,25 @@ export default function ProgramDetail() {
                 </div>
               )}
 
+              <div className="rounded-xl border bg-muted/30 p-4">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <div className="font-medium">Your eligibility check</div>
+                  <Badge variant={eligibility.verdict === "unlikely" ? "destructive" : "secondary"} className="capitalize">
+                    {eligibility.verdict.replace("-", " ")}{eligibility.verdict !== "profile-needed" ? ` · ${eligibility.score}% fit` : ""}
+                  </Badge>
+                </div>
+                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-emerald-700">✓ {reason}</p>)}
+                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-amber-700">! {reason}</p>)}
+                {eligibility.missing.map((reason) => <p key={reason} className="text-sm text-muted-foreground">? {reason}</p>)}
+                <p className="mt-3 text-xs text-muted-foreground">Pre-screen only. Confirm all requirements with the funder.</p>
+              </div>
+
+              <div className="rounded-xl border p-4 text-sm">
+                <div className="font-medium">Source & freshness</div>
+                <p className="mt-1 text-muted-foreground">{opportunity.sourceName} · {opportunity.verificationMethod}</p>
+                {opportunity.lastVerifiedAt && <p className="text-muted-foreground">Last checked {new Date(opportunity.lastVerifiedAt).toLocaleDateString()}</p>}
+              </div>
+
               {program.interest_min !== null && program.interest_max !== null && (
                 <div>
                   <div className="font-medium mb-2">Interest Rate</div>
@@ -262,7 +294,7 @@ export default function ProgramDetail() {
               <Button asChild className="flex-1">
                 <a href={program.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Apply Now
+                  View official source
                 </a>
               </Button>
 

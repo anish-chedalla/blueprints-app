@@ -1,19 +1,20 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { FilterPanel } from "@/components/FilterPanel";
+import { FilterPanel, type ProgramFilters } from "@/components/FilterPanel";
 import { ProgramCard } from "@/components/ProgramCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { isProgramAvailable } from "@/lib/program-availability";
 
 export default function Loans() {
-  const [programs, setPrograms] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<Tables<"programs">[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<ProgramFilters>({
     level: [] as string[],
     city: "",
     county: "",
@@ -24,12 +25,7 @@ export default function Loans() {
     maxAmount: "",
   });
 
-  useEffect(() => {
-    fetchPrograms();
-    fetchFavorites();
-  }, [filters, searchQuery]);
-
-  const fetchPrograms = async () => {
+  const fetchPrograms = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase
@@ -84,14 +80,14 @@ export default function Loans() {
       }
 
       setPrograms(filtered);
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch programs");
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, searchQuery]);
 
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -103,7 +99,12 @@ export default function Loans() {
     if (data) {
       setFavorites(new Set(data.map(f => f.program_id)));
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchPrograms();
+    void fetchFavorites();
+  }, [fetchFavorites, fetchPrograms]);
 
   return (
     <DashboardLayout>

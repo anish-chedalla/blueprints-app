@@ -33,10 +33,9 @@ export const Navbar = () => {
   };
 
   const navLinks = [
-    { path: "/grants", label: "Grants" },
+    { path: "/grants", label: "Grant Finder" },
+    { path: "/saved", label: "Funding Pipeline" },
     { path: "/loans", label: "Loans" },
-    { path: "/idea-lab", label: "Idea Lab" },
-    { path: "/saved", label: "Saved" },
     { path: "/dashboard", label: "Dashboard" },
   ];
 

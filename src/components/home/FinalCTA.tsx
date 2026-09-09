@@ -35,7 +35,7 @@ export const FinalCTA = () => {
             Start your funding search
           </h2>
           <p className="text-xl text-muted-foreground mb-10">
-            Join thousands of small businesses finding the right opportunities
+            Search official federal data and reviewed Arizona opportunities without a paywall
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild className="text-lg px-8 py-6">

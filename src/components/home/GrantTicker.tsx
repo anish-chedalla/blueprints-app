@@ -17,6 +17,8 @@ export const GrantTicker = () => {
         .from("programs")
         .select("*")
         .eq("type", "GRANT")
+        .not("source_id", "is", null)
+        .neq("status", "CLOSED")
         .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: false })
         .limit(10);

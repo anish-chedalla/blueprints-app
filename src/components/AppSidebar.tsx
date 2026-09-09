@@ -1,4 +1,4 @@
-import { Home, Award, DollarSign, Lightbulb, FileText, Bookmark, Rocket, Settings, LogOut } from "lucide-react";
+import { Home, Award, DollarSign, Bookmark, Settings, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -18,12 +18,9 @@ import blueprintsLogo from "@/assets/blueprints-logo.png";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
-  { title: "Grants", url: "/grants", icon: Award },
-  { title: "Loans", url: "/loans", icon: DollarSign },
-  { title: "Idea Lab", url: "/idea-lab", icon: Lightbulb },
-  { title: "Launch Companion", url: "/assistant", icon: Rocket },
-  { title: "Licensing", url: "/licensing", icon: FileText },
-  { title: "Saved", url: "/saved", icon: Bookmark },
+  { title: "Grant Finder", url: "/grants", icon: Award },
+  { title: "Funding Pipeline", url: "/saved", icon: Bookmark },
+  { title: "Loan Programs", url: "/loans", icon: DollarSign },
 ];
 
 export function AppSidebar() {

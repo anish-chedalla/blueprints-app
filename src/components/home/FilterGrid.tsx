@@ -7,19 +7,19 @@ import {
   DollarSign,
   Award,
   Clock,
-  HandCoins,
+  Database,
 } from "lucide-react";
 
 export const FilterGrid = () => {
   const filters = [
     { name: "Industry", icon: Briefcase },
     { name: "Location", icon: MapPin },
-    { name: "Stage", icon: TrendingUp },
+    { name: "Applicant type", icon: TrendingUp },
     { name: "Headcount", icon: Users },
     { name: "Revenue", icon: DollarSign },
     { name: "Ownership", icon: Award },
-    { name: "Timeline", icon: Clock },
-    { name: "Co-funding", icon: HandCoins },
+    { name: "Deadline", icon: Clock },
+    { name: "Source status", icon: Database },
   ];
 
   return (
@@ -33,10 +33,10 @@ export const FilterGrid = () => {
           className="max-w-4xl mx-auto"
         >
           <h2 className="text-4xl font-bold text-center mb-4">
-            Filters that matter
+            Signals you can inspect
           </h2>
           <p className="text-center text-muted-foreground mb-12">
-            Built for real businesses, not just researchers
+            Search filters and profile checks focus on facts that affect eligibility
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {filters.map((filter, i) => (

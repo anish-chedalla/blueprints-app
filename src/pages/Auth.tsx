@@ -133,7 +133,7 @@ export default function Auth() {
             <div className="mt-10 grid gap-5 text-slate-200 sm:grid-cols-3">
               <div className="space-y-2">
                 <Search className="h-5 w-5 text-sky-300" />
-                <p className="text-sm leading-6">Search verified funding programs</p>
+                <p className="text-sm leading-6">Search official-source funding programs</p>
               </div>
               <div className="space-y-2">
                 <BookmarkCheck className="h-5 w-5 text-sky-300" />

@@ -11,7 +11,7 @@ export const ProblemOutcome = () => {
   const outcomes = [
     "One search across federal and local",
     "Filters that match small business realities",
-    "Clear steps and reminders",
+    "Official links, review dates, and reminders",
   ];
 
   return (

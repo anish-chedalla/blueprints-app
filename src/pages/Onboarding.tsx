@@ -7,15 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, MapPin, Users, Briefcase, Award } from "lucide-react";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "manufacturing", "healthcare"];
-const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned"];
+const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned", "tribal", "rural"];
 const BUSINESS_TYPES = ["LLC", "Sole Proprietor", "Corporation", "Partnership", "Nonprofit"];
+const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editMode = searchParams.get("edit") === "1";
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -23,6 +27,8 @@ export default function Onboarding() {
     city: "",
     county: "",
     employees: "",
+    revenue: "",
+    yearsInBusiness: "",
     industryTags: [] as string[],
     demographics: [] as string[],
   });
@@ -41,12 +47,24 @@ export default function Onboarding() {
         .eq("user_id", session.user.id)
         .single();
 
-      if (profile?.business_name) {
+      if (profile?.business_name && !editMode) {
         navigate("/dashboard");
+      } else if (profile) {
+        setFormData({
+          businessName: profile.business_name || "",
+          businessType: profile.business_type || "",
+          city: profile.city || "",
+          county: profile.county || "",
+          employees: profile.employees?.toString() || "",
+          revenue: profile.revenue_usd?.toString() || "",
+          yearsInBusiness: profile.years_in_business?.toString() || "",
+          industryTags: profile.industry_tags || [],
+          demographics: profile.demographics || [],
+        });
       }
     };
     checkExistingProfile();
-  }, [navigate]);
+  }, [editMode, navigate]);
 
   const toggleTag = (tag: string, field: "industryTags" | "demographics") => {
     setFormData(prev => ({
@@ -65,12 +83,15 @@ export default function Onboarding() {
     }
 
     try {
-      const profileData: any = {
+      const profileData: TablesInsert<"profiles"> = {
         user_id: session.user.id,
         business_name: formData.businessName,
         city: formData.city || null,
         county: formData.county || null,
-        employees: parseInt(formData.employees) || null,
+        employees: optionalNumber(formData.employees),
+        revenue_usd: optionalNumber(formData.revenue),
+        business_type: formData.businessType || null,
+        years_in_business: optionalNumber(formData.yearsInBusiness),
         industry_tags: formData.industryTags,
         demographics: formData.demographics,
       };
@@ -79,7 +100,7 @@ export default function Onboarding() {
 
       if (error) throw error;
       toast.success("Profile saved successfully!");
-      navigate("/dashboard");
+      navigate(editMode ? "/grants" : "/dashboard");
     } catch (error) {
       toast.error("Failed to save profile");
     }
@@ -118,7 +139,17 @@ export default function Onboarding() {
             </div>
             <div>
               <Label htmlFor="employees">Number of Employees</Label>
-              <Input id="employees" type="number" value={formData.employees} onChange={(e) => setFormData({...formData, employees: e.target.value})} placeholder="e.g., 5" />
+              <Input id="employees" type="number" min="0" value={formData.employees} onChange={(e) => setFormData({...formData, employees: e.target.value})} placeholder="e.g., 5" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="revenue">Approximate annual revenue</Label>
+                <Input id="revenue" type="number" min="0" value={formData.revenue} onChange={(e) => setFormData({...formData, revenue: e.target.value})} placeholder="e.g., 75000" />
+              </div>
+              <div>
+                <Label htmlFor="yearsInBusiness">Years in business</Label>
+                <Input id="yearsInBusiness" type="number" min="0" value={formData.yearsInBusiness} onChange={(e) => setFormData({...formData, yearsInBusiness: e.target.value})} placeholder="0 for pre-launch" />
+              </div>
             </div>
           </div>
         );
@@ -189,7 +220,7 @@ export default function Onboarding() {
         <Card className="border-2">
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
-              <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+              <CardTitle className="text-2xl">{editMode ? "Update Match Profile" : "Complete Your Profile"}</CardTitle>
               <span className="text-sm text-muted-foreground">Step {step} of {totalSteps}</span>
             </div>
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">

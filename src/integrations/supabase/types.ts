@@ -152,65 +152,86 @@ export type Database = {
       }
       profiles: {
         Row: {
+          business_type: string | null
           business_name: string | null
           city: string | null
           county: string | null
           created_at: string
           demographics: string[] | null
+          email_alerts_enabled: boolean
           employees: number | null
           id: string
           industry_tags: string[] | null
           revenue_usd: number | null
           updated_at: string
           user_id: string
+          years_in_business: number | null
         }
         Insert: {
+          business_type?: string | null
           business_name?: string | null
           city?: string | null
           county?: string | null
           created_at?: string
           demographics?: string[] | null
+          email_alerts_enabled?: boolean
           employees?: number | null
           id?: string
           industry_tags?: string[] | null
           revenue_usd?: number | null
           updated_at?: string
           user_id: string
+          years_in_business?: number | null
         }
         Update: {
+          business_type?: string | null
           business_name?: string | null
           city?: string | null
           county?: string | null
           created_at?: string
           demographics?: string[] | null
+          email_alerts_enabled?: boolean
           employees?: number | null
           id?: string
           industry_tags?: string[] | null
           revenue_usd?: number | null
           updated_at?: string
           user_id?: string
+          years_in_business?: number | null
         }
         Relationships: []
       }
       programs: {
         Row: {
+          applicant_types: string[] | null
           city: string | null
           county: string | null
           created_at: string
           deadline: string | null
           demographics: string[] | null
           description: string
+          eligibility_notes: string | null
+          eligible_states: string[] | null
           id: string
           industry_tags: string[] | null
           interest_max: number | null
           interest_min: number | null
           level: Database["public"]["Enums"]["program_level"]
+          last_verified_at: string | null
           max_amount: number | null
+          max_employees: number | null
+          max_revenue: number | null
           min_amount: number | null
+          min_employees: number | null
+          min_revenue: number | null
           name: string
+          opens_at: string | null
           rolling: boolean | null
           secured: boolean | null
           source_id: string | null
+          source_kind: string | null
+          source_name: string | null
+          source_url: string | null
           sponsor: string
           state: string | null
           status: Database["public"]["Enums"]["program_status"] | null
@@ -218,25 +239,38 @@ export type Database = {
           updated_at: string
           url: string
           use_cases: string[] | null
+          verification_method: string | null
         }
         Insert: {
+          applicant_types?: string[] | null
           city?: string | null
           county?: string | null
           created_at?: string
           deadline?: string | null
           demographics?: string[] | null
           description: string
+          eligibility_notes?: string | null
+          eligible_states?: string[] | null
           id?: string
           industry_tags?: string[] | null
           interest_max?: number | null
           interest_min?: number | null
           level: Database["public"]["Enums"]["program_level"]
+          last_verified_at?: string | null
           max_amount?: number | null
+          max_employees?: number | null
+          max_revenue?: number | null
           min_amount?: number | null
+          min_employees?: number | null
+          min_revenue?: number | null
           name: string
+          opens_at?: string | null
           rolling?: boolean | null
           secured?: boolean | null
           source_id?: string | null
+          source_kind?: string | null
+          source_name?: string | null
+          source_url?: string | null
           sponsor: string
           state?: string | null
           status?: Database["public"]["Enums"]["program_status"] | null
@@ -244,25 +278,38 @@ export type Database = {
           updated_at?: string
           url: string
           use_cases?: string[] | null
+          verification_method?: string | null
         }
         Update: {
+          applicant_types?: string[] | null
           city?: string | null
           county?: string | null
           created_at?: string
           deadline?: string | null
           demographics?: string[] | null
           description?: string
+          eligibility_notes?: string | null
+          eligible_states?: string[] | null
           id?: string
           industry_tags?: string[] | null
           interest_max?: number | null
           interest_min?: number | null
           level?: Database["public"]["Enums"]["program_level"]
+          last_verified_at?: string | null
           max_amount?: number | null
+          max_employees?: number | null
+          max_revenue?: number | null
           min_amount?: number | null
+          min_employees?: number | null
+          min_revenue?: number | null
           name?: string
+          opens_at?: string | null
           rolling?: boolean | null
           secured?: boolean | null
           source_id?: string | null
+          source_kind?: string | null
+          source_name?: string | null
+          source_url?: string | null
           sponsor?: string
           state?: string | null
           status?: Database["public"]["Enums"]["program_status"] | null
@@ -270,6 +317,7 @@ export type Database = {
           updated_at?: string
           url?: string
           use_cases?: string[] | null
+          verification_method?: string | null
         }
         Relationships: []
       }
@@ -304,6 +352,190 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      grant_sources: {
+        Row: {
+          access_method: string
+          automated: boolean
+          coverage: string
+          created_at: string
+          homepage_url: string
+          id: string
+          is_official: boolean
+          last_checked_at: string | null
+          name: string
+          notes: string | null
+          status: string
+          update_frequency: string
+          updated_at: string
+        }
+        Insert: {
+          access_method: string
+          automated?: boolean
+          coverage: string
+          created_at?: string
+          homepage_url: string
+          id: string
+          is_official?: boolean
+          last_checked_at?: string | null
+          name: string
+          notes?: string | null
+          status?: string
+          update_frequency: string
+          updated_at?: string
+        }
+        Update: {
+          access_method?: string
+          automated?: boolean
+          coverage?: string
+          created_at?: string
+          homepage_url?: string
+          id?: string
+          is_official?: boolean
+          last_checked_at?: string | null
+          name?: string
+          notes?: string | null
+          status?: string
+          update_frequency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      opportunity_reminders: {
+        Row: {
+          created_at: string
+          delivery_channels: string[]
+          dismissed_at: string | null
+          email_sent_at: string | null
+          id: string
+          remind_at: string
+          saved_opportunity_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_channels?: string[]
+          dismissed_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          remind_at: string
+          saved_opportunity_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_channels?: string[]
+          dismissed_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          remind_at?: string
+          saved_opportunity_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_reminders_saved_opportunity_id_fkey"
+            columns: ["saved_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "saved_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_opportunities: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          external_id: string
+          id: string
+          note: string | null
+          official_url: string
+          pipeline_status: string
+          program_id: string | null
+          snapshot: Json
+          source: string
+          sponsor: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          external_id: string
+          id?: string
+          note?: string | null
+          official_url: string
+          pipeline_status?: string
+          program_id?: string | null
+          snapshot?: Json
+          source: string
+          sponsor: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          external_id?: string
+          id?: string
+          note?: string | null
+          official_url?: string
+          pipeline_status?: string
+          program_id?: string | null
+          snapshot?: Json
+          source?: string
+          sponsor?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_opportunities_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_searches: {
+        Row: {
+          created_at: string
+          criteria: Json
+          email_enabled: boolean
+          id: string
+          last_checked_at: string | null
+          last_result_ids: string[]
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          criteria?: Json
+          email_enabled?: boolean
+          id?: string
+          last_checked_at?: string | null
+          last_result_ids?: string[]
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          criteria?: Json
+          email_enabled?: boolean
+          id?: string
+          last_checked_at?: string | null
+          last_result_ids?: string[]
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       sync_metadata: {
         Row: {

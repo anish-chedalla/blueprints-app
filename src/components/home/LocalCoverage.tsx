@@ -4,11 +4,11 @@ import { MapPin } from "lucide-react";
 export const LocalCoverage = () => {
   const sources = [
     "AZ Commerce Authority",
-    "City of Phoenix",
-    "City of Tempe",
-    "City of Tucson",
-    "Maricopa County",
-    "Pima County",
+    "AZ Commission on the Arts",
+    "AZ Department of Administration",
+    "AZ Department of Agriculture",
+    "AZ Office of Economic Opportunity",
+    "AZ Registrar of Contractors",
   ];
 
   return (
@@ -25,7 +25,7 @@ export const LocalCoverage = () => {
             Extra coverage for Arizona
           </h2>
           <p className="text-center text-muted-foreground mb-12">
-            We monitor state and local programs to give you complete coverage
+            We review official state and local pages and show exactly when each record was checked
           </p>
           <div className="grid md:grid-cols-3 gap-4">
             {sources.map((source, i) => (

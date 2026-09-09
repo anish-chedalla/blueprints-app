@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, DollarSign, CheckCircle2, TrendingUp, Lightbulb, ArrowRight, Layers } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,8 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import blueprintBg from "@/assets/blueprint-bg.jpg";
 
 export default function Dashboard() {
-  const [recentGrants, setRecentGrants] = useState<any[]>([]);
-  const [recentLoans, setRecentLoans] = useState<any[]>([]);
+  const [recentGrants, setRecentGrants] = useState<Tables<"programs">[]>([]);
+  const [recentLoans, setRecentLoans] = useState<Tables<"programs">[]>([]);
   const [loading, setLoading] = useState(true);
   const [grantsCount, setGrantsCount] = useState(0);
   const [loansCount, setLoansCount] = useState(0);
@@ -18,21 +19,7 @@ export default function Dashboard() {
   const [newThisWeekCount, setNewThisWeekCount] = useState(0);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast.error("Please sign in to view your dashboard");
-      navigate("/auth");
-      return;
-    }
-    fetchDashboardData(session.user.id);
-  };
-
-  const fetchDashboardData = async (userId: string) => {
+  const fetchDashboardData = useCallback(async (userId: string) => {
     setLoading(true);
     try {
       // Fetch recent grants
@@ -40,6 +27,8 @@ export default function Dashboard() {
         .from("programs")
         .select("*")
         .eq("type", "GRANT")
+        .not("source_id", "is", null)
+        .neq("status", "CLOSED")
         .order("created_at", { ascending: false })
         .limit(2);
 
@@ -55,7 +44,9 @@ export default function Dashboard() {
       const { count: grantsTotal } = await supabase
         .from("programs")
         .select("*", { count: "exact", head: true })
-        .eq("type", "GRANT");
+        .eq("type", "GRANT")
+        .not("source_id", "is", null)
+        .neq("status", "CLOSED");
 
       // Count all loans
       const { count: loansTotal } = await supabase
@@ -65,7 +56,7 @@ export default function Dashboard() {
 
       // Count saved items
       const { count: savedTotal } = await supabase
-        .from("favorites")
+        .from("saved_opportunities")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId);
 
@@ -75,6 +66,9 @@ export default function Dashboard() {
       const { count: newThisWeek } = await supabase
         .from("programs")
         .select("*", { count: "exact", head: true })
+        .eq("type", "GRANT")
+        .not("source_id", "is", null)
+        .neq("status", "CLOSED")
         .gte("created_at", oneWeekAgo.toISOString());
 
       setRecentGrants(grantsData || []);
@@ -83,12 +77,26 @@ export default function Dashboard() {
       setLoansCount(loansTotal || 0);
       setSavedCount(savedTotal || 0);
       setNewThisWeekCount(newThisWeek || 0);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const checkAuth = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Please sign in to view your dashboard");
+      navigate("/auth");
+      return;
+    }
+    await fetchDashboardData(session.user.id);
+  }, [fetchDashboardData, navigate]);
+
+  useEffect(() => {
+    void checkAuth();
+  }, [checkAuth]);
 
   if (loading) {
     return (
@@ -121,7 +129,7 @@ export default function Dashboard() {
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-6">
                   <Layers className="w-4 h-4 text-primary" />
                   <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                    Arizona Business Platform
+                    Arizona Grant Discovery
                   </span>
                 </div>
                 
@@ -130,7 +138,7 @@ export default function Dashboard() {
                 </h1>
                 
                 <p className="text-xl text-muted-foreground mb-8 max-w-2xl">
-                  Discover grants, secure loans, and navigate Arizona's business landscape with precision.
+                  Search official grant sources, understand eligibility, and track every serious opportunity.
                 </p>
                 
                 <div className="flex items-center gap-3">
@@ -143,7 +151,7 @@ export default function Dashboard() {
                   <Button size="lg" variant="outline" asChild className="group">
                     <Link to="/idea-lab">
                       <Lightbulb className="mr-2 w-4 h-4 transition-all duration-200 group-hover:text-primary" />
-                      Generate Ideas
+                      Review Match Profile
                     </Link>
                   </Button>
                 </div>

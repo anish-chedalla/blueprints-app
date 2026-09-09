@@ -11,7 +11,6 @@ import { FilterGrid } from "@/components/home/FilterGrid";
 import { EmailCapture } from "@/components/home/EmailCapture";
 import { AssuranceRow } from "@/components/home/AssuranceRow";
 import { FinalCTA } from "@/components/home/FinalCTA";
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 const Footer = () => (
@@ -29,14 +28,12 @@ const Footer = () => (
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li><Link to="/grants" className="hover:text-foreground">Grants</Link></li>
             <li><Link to="/loans" className="hover:text-foreground">Loans</Link></li>
-            <li><Link to="/licensing" className="hover:text-foreground">Licensing</Link></li>
           </ul>
         </div>
         <div>
           <h3 className="font-semibold mb-4">Tools</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/assistant" className="hover:text-foreground">AI Assistant</Link></li>
-            <li><Link to="/saved" className="hover:text-foreground">Saved</Link></li>
+            <li><Link to="/saved" className="hover:text-foreground">Funding Pipeline</Link></li>
           </ul>
         </div>
         <div>
@@ -49,7 +46,7 @@ const Footer = () => (
         </div>
       </div>
       <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
-        <p>© 2025 Blueprints. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} Blueprints. All rights reserved.</p>
       </div>
     </div>
   </footer>

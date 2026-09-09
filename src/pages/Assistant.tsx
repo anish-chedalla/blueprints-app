@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,13 +42,13 @@ const PHASES: PhaseCard[] = [
   { id: "operate", title: "Operate & Grow", description: "Launch & scale", icon: TrendingUp, completed: false },
 ];
 
+const INITIAL_MESSAGE: Message = {
+  role: "assistant",
+  content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning — for example, 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
+};
+
 export default function Assistant() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning — for example, 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
@@ -65,11 +65,7 @@ export default function Assistant() {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    loadChatHistory();
-  }, []);
-
-  const loadChatHistory = async () => {
+  const loadChatHistory = useCallback(async () => {
     try {
       setIsLoadingHistory(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -124,7 +120,7 @@ export default function Assistant() {
           role: chat.role as "user" | "assistant",
           content: chat.content
         }));
-        setMessages([messages[0], ...chatMessages]);
+        setMessages([INITIAL_MESSAGE, ...chatMessages]);
       }
 
       setIsLoadingHistory(false);
@@ -134,7 +130,11 @@ export default function Assistant() {
       // Fallback to new session
       setSessionId(crypto.randomUUID());
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadChatHistory();
+  }, [loadChatHistory]);
 
   const streamChat = async (userMessage: string) => {
     const newMessages = [...messages, { role: "user" as const, content: userMessage }];

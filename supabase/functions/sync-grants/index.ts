@@ -20,7 +20,29 @@ interface GrantAPIRequest {
   eligibilities?: string;
 }
 
-async function fetchGrantsFromAPI(requestBody: GrantAPIRequest) {
+interface GrantSearchHit {
+  id?: string | number;
+  awardFloor?: string | number;
+  awardCeiling?: string | number;
+  estimatedFunding?: string | number;
+  fundingCategories?: string | string[];
+  category?: string | string[];
+  eligibilities?: string | string[];
+  oppStatus?: string;
+  title?: string;
+  agency?: string;
+  agencyName?: string;
+  description?: string;
+  synopsis?: string;
+  closeDate?: string;
+  scopeState?: string | null;
+}
+
+interface GrantSearchData {
+  oppHits?: GrantSearchHit[];
+}
+
+async function fetchGrantsFromAPI(requestBody: GrantAPIRequest): Promise<GrantSearchData> {
   const apiUrl = 'https://api.grants.gov/v1/api/search2';
   
   console.log('Calling Grants.gov API with body:', requestBody);
@@ -53,27 +75,27 @@ function parseApiDate(value: unknown): string | null {
   return `${match[3]}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}T12:00:00.000Z`;
 }
 
-function parseGrantAmount(oppHit: any): { min_amount: number | null, max_amount: number | null } {
-  let min_amount = null;
-  let max_amount = null;
+function parseGrantAmount(oppHit: GrantSearchHit): { min_amount: number | null, max_amount: number | null } {
+  let min_amount: number | null = null;
+  let max_amount: number | null = null;
 
   // Try to parse award floor and ceiling
-  if (oppHit.awardFloor && !isNaN(parseFloat(oppHit.awardFloor))) {
-    min_amount = Math.round(parseFloat(oppHit.awardFloor));
+  if (oppHit.awardFloor !== undefined && Number.isFinite(Number(oppHit.awardFloor))) {
+    min_amount = Math.round(Number(oppHit.awardFloor));
   }
-  if (oppHit.awardCeiling && !isNaN(parseFloat(oppHit.awardCeiling))) {
-    max_amount = Math.round(parseFloat(oppHit.awardCeiling));
+  if (oppHit.awardCeiling !== undefined && Number.isFinite(Number(oppHit.awardCeiling))) {
+    max_amount = Math.round(Number(oppHit.awardCeiling));
   }
 
   // Try to parse estimated funding
-  if (!max_amount && oppHit.estimatedFunding && !isNaN(parseFloat(oppHit.estimatedFunding))) {
-    max_amount = Math.round(parseFloat(oppHit.estimatedFunding));
+  if (max_amount === null && oppHit.estimatedFunding !== undefined && Number.isFinite(Number(oppHit.estimatedFunding))) {
+    max_amount = Math.round(Number(oppHit.estimatedFunding));
   }
 
   return { min_amount, max_amount };
 }
 
-function parseIndustryTags(oppHit: any): string[] {
+function parseIndustryTags(oppHit: GrantSearchHit): string[] {
   const tags: string[] = [];
   
   if (oppHit.fundingCategories) {
@@ -94,7 +116,7 @@ function parseIndustryTags(oppHit: any): string[] {
   return [...new Set(tags)];
 }
 
-function parseDemographics(oppHit: any): string[] {
+function parseDemographics(oppHit: GrantSearchHit): string[] {
   const demographics: string[] = [];
   
   if (oppHit.eligibilities) {
@@ -146,7 +168,7 @@ serve(async (req) => {
 
     let recordsAffected = 0;
     let recordsFailed = 0;
-    const grants = [];
+    const grants: GrantSearchHit[] = [];
 
     // Fetch Arizona grants
     if (scope === 'arizona' || scope === 'both') {

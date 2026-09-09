@@ -10,8 +10,9 @@ import { toast } from "sonner";
 import { Building2, MapPin, Users, Briefcase } from "lucide-react";
 
 const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "manufacturing", "healthcare"];
-const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned"];
+const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned", "tribal", "rural"];
 const BUSINESS_TYPES = ["LLC", "Sole Proprietor", "Corporation", "Partnership", "Nonprofit"];
+const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
 
 interface ProfileSettingsDialogProps {
   open: boolean;
@@ -26,6 +27,8 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
     city: "",
     county: "",
     employees: "",
+    revenue: "",
+    yearsInBusiness: "",
     industryTags: [] as string[],
     demographics: [] as string[],
   });
@@ -49,10 +52,12 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
     if (profile) {
       setFormData({
         businessName: profile.business_name || "",
-        businessType: "",
+        businessType: profile.business_type || "",
         city: profile.city || "",
         county: profile.county || "",
         employees: profile.employees?.toString() || "",
+        revenue: profile.revenue_usd?.toString() || "",
+        yearsInBusiness: profile.years_in_business?.toString() || "",
         industryTags: profile.industry_tags || [],
         demographics: profile.demographics || [],
       });
@@ -82,7 +87,10 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
             business_name: formData.businessName,
             city: formData.city || null,
             county: formData.county || null,
-            employees: parseInt(formData.employees) || null,
+            employees: optionalNumber(formData.employees),
+            revenue_usd: optionalNumber(formData.revenue),
+            business_type: formData.businessType || null,
+            years_in_business: optionalNumber(formData.yearsInBusiness),
             industry_tags: formData.industryTags,
             demographics: formData.demographics,
           },
@@ -134,7 +142,17 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
             </div>
             <div>
               <Label htmlFor="employees">Number of Employees</Label>
-              <Input id="employees" type="number" value={formData.employees} onChange={(e) => setFormData({...formData, employees: e.target.value})} />
+              <Input id="employees" type="number" min="0" value={formData.employees} onChange={(e) => setFormData({...formData, employees: e.target.value})} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="profileRevenue">Approximate annual revenue</Label>
+                <Input id="profileRevenue" type="number" min="0" value={formData.revenue} onChange={(e) => setFormData({...formData, revenue: e.target.value})} />
+              </div>
+              <div>
+                <Label htmlFor="profileYears">Years in business</Label>
+                <Input id="profileYears" type="number" min="0" value={formData.yearsInBusiness} onChange={(e) => setFormData({...formData, yearsInBusiness: e.target.value})} />
+              </div>
             </div>
           </div>
 

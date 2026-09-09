@@ -17,8 +17,8 @@ export const Steps = () => {
     },
     {
       number: 3,
-      title: "Apply",
-      copy: "We give checklists, forms, and reminders.",
+      title: "Track",
+      copy: "Save strong candidates, set reminders, and continue on the official source.",
       icon: ClipboardList,
     },
   ];

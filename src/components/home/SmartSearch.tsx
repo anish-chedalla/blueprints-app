@@ -25,7 +25,7 @@ export const SmartSearch = () => {
   };
 
   const handleChipClick = (chip: string) => {
-    navigate(`/grants?filter=${encodeURIComponent(chip)}`);
+    navigate(`/grants?search=${encodeURIComponent(chip)}`);
   };
 
   return (

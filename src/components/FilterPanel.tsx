@@ -8,18 +8,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 
+export interface ProgramFilters {
+  level: string[];
+  city: string;
+  county: string;
+  industryTags: string[];
+  demographics: string[];
+  rolling: boolean | null;
+  minAmount: string;
+  maxAmount: string;
+}
+
 interface FilterPanelProps {
-  filters: {
-    level: string[];
-    city: string;
-    county: string;
-    industryTags: string[];
-    demographics: string[];
-    rolling: boolean | null;
-    minAmount: string;
-    maxAmount: string;
-  };
-  onFilterChange: (filters: any) => void;
+  filters: ProgramFilters;
+  onFilterChange: (filters: ProgramFilters) => void;
   type: "GRANT" | "LOAN";
 }
 

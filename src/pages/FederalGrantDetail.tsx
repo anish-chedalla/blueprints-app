@@ -4,7 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { evaluateEligibility } from "@/lib/eligibility";
 import { fetchFederalGrantDetail } from "@/lib/grants-gov";
+import { federalDetailToOpportunity, serializeOpportunity } from "@/lib/opportunities";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -14,11 +18,15 @@ import {
   CircleDollarSign,
   ExternalLink,
   Hash,
+  Bookmark,
+  BookmarkCheck,
   Mail,
   Phone,
   Users,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 function formatDate(value: string | null): string {
   if (!value) return "Not announced";
@@ -40,6 +48,10 @@ function formatMoney(value: number | null): string {
 
 export default function FederalGrantDetail() {
   const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const numericId = Number(id);
   const validId = Number.isSafeInteger(numericId) && numericId > 0;
   const detailQuery = useQuery({
@@ -49,6 +61,20 @@ export default function FederalGrantDetail() {
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
+
+  useEffect(() => {
+    const loadUserState = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const [profileResult, savedResult] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle(),
+        supabase.from("saved_opportunities").select("id").eq("user_id", session.user.id).eq("source", "grants.gov").eq("external_id", id).maybeSingle(),
+      ]);
+      setProfile(profileResult.data || null);
+      setSaved(Boolean(savedResult.data));
+    };
+    void loadUserState();
+  }, [id]);
 
   if (!validId) {
     return (
@@ -110,10 +136,31 @@ export default function FederalGrantDetail() {
   }
 
   const grant = detailQuery.data;
+  const opportunity = federalDetailToOpportunity(grant);
+  const eligibility = evaluateEligibility(profile, opportunity);
   const hasAwardData = grant.awardFloor !== null
     || grant.awardCeiling !== null
     || grant.estimatedFunding !== null
     || grant.expectedAwards !== null;
+
+  const toggleSaved = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { navigate("/auth"); toast.error("Sign in to save this opportunity"); return; }
+    setSaving(true);
+    try {
+      if (saved) {
+        const { error } = await supabase.from("saved_opportunities").delete().eq("user_id", session.user.id).eq("source", "grants.gov").eq("external_id", id);
+        if (error) throw error;
+        setSaved(false);
+      } else {
+        const { error } = await supabase.from("saved_opportunities").upsert({ ...serializeOpportunity(opportunity), user_id: session.user.id }, { onConflict: "user_id,source,external_id" });
+        if (error) throw error;
+        setSaved(true);
+      }
+      toast.success(saved ? "Removed from pipeline" : "Saved to pipeline");
+    } catch (error) { console.error(error); toast.error("Could not update your pipeline"); }
+    finally { setSaving(false); }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,6 +182,10 @@ export default function FederalGrantDetail() {
             {grant.agency}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
+            <Button variant="outline" onClick={toggleSaved} disabled={saving}>
+              {saved ? <BookmarkCheck className="mr-2 h-4 w-4" /> : <Bookmark className="mr-2 h-4 w-4" />}
+              {saved ? "Saved to pipeline" : "Save and track"}
+            </Button>
             <Button asChild>
               <a href={grant.officialUrl} target="_blank" rel="noreferrer">
                 View and apply on Grants.gov <ExternalLink className="ml-2 h-4 w-4" />
@@ -152,6 +203,17 @@ export default function FederalGrantDetail() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Your eligibility check</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <Badge variant={eligibility.verdict === "unlikely" ? "destructive" : "secondary"} className="capitalize">{eligibility.verdict.replace("-", " ")}{eligibility.verdict !== "profile-needed" ? ` · ${eligibility.score}% fit` : ""}</Badge>
+                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-emerald-700">✓ {reason}</p>)}
+                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-amber-700">! {reason}</p>)}
+                {eligibility.missing.map((reason) => <p key={reason} className="text-sm text-muted-foreground">? {reason}</p>)}
+                {!profile && <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>Sign in to calculate fit</Button>}
+                <p className="text-xs text-muted-foreground">This is an explainable pre-screen, not a funder decision. Confirm the complete notice before applying.</p>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader><CardTitle>Opportunity overview</CardTitle></CardHeader>
               <CardContent>
