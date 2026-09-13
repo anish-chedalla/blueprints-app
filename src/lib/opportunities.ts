@@ -6,6 +6,7 @@ export type OpportunityStatus = "open" | "forecasted" | "rolling" | "closed";
 
 export interface Opportunity {
   key: string;
+  fundingType: "GRANT" | "LOAN";
   source: OpportunitySource;
   externalId: string;
   programId: string | null;
@@ -51,9 +52,10 @@ export function curatedProgramToOpportunity(program: Program): Opportunity {
   const externalId = program.source_id || program.id;
   return {
     key: opportunityKey("blueprints", externalId),
+    fundingType: program.type,
     source: "blueprints",
     externalId,
-    programId: program.id,
+    programId: program.id.startsWith("catalog:") ? null : program.id,
     title: program.name,
     sponsor: program.sponsor,
     description: program.description,
@@ -87,6 +89,7 @@ export function curatedProgramToOpportunity(program: Program): Opportunity {
 export function federalHitToOpportunity(hit: FederalGrantSearchHit): Opportunity {
   return {
     key: opportunityKey("grants.gov", hit.id),
+    fundingType: "GRANT",
     source: "grants.gov",
     externalId: hit.id,
     programId: null,
@@ -169,6 +172,7 @@ export function savedRowToOpportunity(row: Tables<"saved_opportunities">): Oppor
     : {};
   return {
     key: opportunityKey(row.source, row.external_id),
+    fundingType: snapshot.fundingType === "LOAN" || snapshot.type === "LOAN" ? "LOAN" : "GRANT",
     source: row.source === "grants.gov" ? "grants.gov" : "blueprints",
     externalId: row.external_id,
     programId: row.program_id,

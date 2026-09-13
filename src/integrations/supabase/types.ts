@@ -549,6 +549,59 @@ export type Database = {
           },
         ]
       }
+      view_history: {
+        Row: {
+          external_id: string
+          funding_type: string
+          id: string
+          internal_url: string | null
+          official_url: string
+          opportunity_key: string
+          program_id: string | null
+          source: string
+          sponsor: string
+          title: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          external_id: string
+          funding_type: string
+          id?: string
+          internal_url?: string | null
+          official_url: string
+          opportunity_key: string
+          program_id?: string | null
+          source: string
+          sponsor: string
+          title: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          external_id?: string
+          funding_type?: string
+          id?: string
+          internal_url?: string | null
+          official_url?: string
+          opportunity_key?: string
+          program_id?: string | null
+          source?: string
+          sponsor?: string
+          title?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "view_history_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_searches: {
         Row: {
           created_at: string

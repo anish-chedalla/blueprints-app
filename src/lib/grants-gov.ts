@@ -29,6 +29,7 @@ export interface FederalGrantSearchParams {
   eligibility?: string;
   category?: string;
   agency?: string;
+  dateRange?: string;
   instrument?: "G" | "CA" | "G|CA";
   page?: number;
   rows?: number;
@@ -229,6 +230,7 @@ export async function searchFederalGrants(
     eligibilities: params.eligibility || "",
     fundingCategories: params.category || "",
     agencies: params.agency || "",
+    dateRange: params.dateRange || "",
     fundingInstruments: params.instrument || "G",
   }, signal);
 
@@ -256,6 +258,23 @@ export async function searchFederalGrants(
           : [],
     })).filter((hit) => hit.id),
   };
+}
+
+/**
+ * Grants.gov exposes parent-agency facet values such as `DOD`, but its search
+ * endpoint only returns the advertised records when the current leaf agency
+ * codes are joined with `|`. Keep the parent label in our UI and translate it
+ * to the API's searchable values here.
+ */
+export function federalAgencySearchValue(
+  selectedValue: string | undefined,
+  agencies: FederalGrantAgencyOption[],
+): string {
+  if (!selectedValue) return "";
+  const selected = agencies.find((agency) => agency.value === selectedValue);
+  if (!selected) return "";
+  const searchableValues = selected.subAgencies.map((agency) => agency.value).filter(Boolean);
+  return searchableValues.length > 0 ? searchableValues.join("|") : selected.value;
 }
 
 function asRecord(value: unknown): UnknownRecord {
@@ -348,7 +367,7 @@ export async function fetchFederalGrantDetail(
     number: firstText(data.opportunityNumber),
     title: firstText(data.opportunityTitle) || "Untitled opportunity",
     agencyCode: firstText(data.owningAgencyCode, details.agencyCode),
-    agency: firstText(details.agencyName, agencyDetails.agencyName) || "Unknown federal agency",
+    agency: firstText(agencyDetails.agencyName, details.agencyName) || "Unknown federal agency",
     status: firstText(data.ost, data.docType).toLowerCase(),
     documentType: firstText(data.docType).toLowerCase(),
     opportunityCategory: firstText(opportunityCategory.description) || null,

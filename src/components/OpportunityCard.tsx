@@ -5,6 +5,7 @@ import type { EligibilityResult } from "@/lib/eligibility";
 import type { Opportunity } from "@/lib/opportunities";
 import { Bookmark, BookmarkCheck, CalendarDays, CheckCircle2, CircleHelp, ExternalLink, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { recordOpportunityView } from "@/lib/view-history";
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
@@ -44,6 +45,10 @@ export function OpportunityCard({ opportunity, eligibility, saved, saving, onSav
   const internalUrl = opportunity.source === "grants.gov"
     ? `/federal-grant/${opportunity.externalId}`
     : `/program/${opportunity.programId}`;
+  const openDetails = () => {
+    void recordOpportunityView(opportunity);
+    navigate(internalUrl);
+  };
 
   return (
     <Card className="flex h-full flex-col border-border/70 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
@@ -71,7 +76,7 @@ export function OpportunityCard({ opportunity, eligibility, saved, saving, onSav
           type="button"
           className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium ${verdict.className}`}
           title={[...eligibility.reasons, ...eligibility.cautions, ...eligibility.missing].join(" • ")}
-          onClick={() => navigate(internalUrl)}
+          onClick={openDetails}
         >
           <VerdictIcon className="h-4 w-4 shrink-0" />
           <span>{verdict.label}{eligibility.verdict !== "profile-needed" ? ` · ${eligibility.score}% fit` : ""}</span>
@@ -90,9 +95,9 @@ export function OpportunityCard({ opportunity, eligibility, saved, saving, onSav
         </dl>
 
         <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
-          <Button variant="outline" onClick={() => navigate(internalUrl)}>Eligibility details</Button>
+          <Button variant="outline" onClick={openDetails}>Eligibility details</Button>
           <Button asChild>
-            <a href={opportunity.officialUrl} target="_blank" rel="noreferrer">
+            <a href={opportunity.officialUrl} target="_blank" rel="noreferrer" onClick={() => void recordOpportunityView(opportunity)}>
               Official source <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>

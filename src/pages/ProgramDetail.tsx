@@ -81,7 +81,7 @@ export default function ProgramDetail() {
           .eq("user_id", session.user.id).eq("program_id", id);
 
         if (error) throw error;
-        toast.success("Removed from favorites");
+        toast.success("Removed from saved funding");
         setIsFavorite(false);
       } else {
         const { error } = await supabase.from("saved_opportunities").insert({
@@ -89,11 +89,11 @@ export default function ProgramDetail() {
         });
 
         if (error) throw error;
-        toast.success("Added to favorites");
+        toast.success("Saved to your funding list");
         setIsFavorite(true);
       }
     } catch {
-      toast.error("Failed to update favorites");
+      toast.error("Failed to update saved funding");
     }
   };
 

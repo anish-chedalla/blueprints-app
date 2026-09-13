@@ -1,6 +1,5 @@
-import { Home, Award, DollarSign, Bookmark, Settings, LogOut } from "lucide-react";
+import { Home, Award, DollarSign, Bookmark, Settings, LogOut, History } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,20 +11,18 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfileSettingsDialog } from "./ProfileSettingsDialog";
 import { toast } from "sonner";
-import blueprintsLogo from "@/assets/blueprints-logo.png";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Grant Finder", url: "/grants", icon: Award },
-  { title: "Funding Pipeline", url: "/saved", icon: Bookmark },
+  { title: "Saved Funding", url: "/saved", icon: Bookmark },
   { title: "Loan Programs", url: "/loans", icon: DollarSign },
+  { title: "History", url: "/history", icon: History },
 ];
 
 export function AppSidebar() {
   const navigate = useNavigate();
-  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -38,8 +35,6 @@ export function AppSidebar() {
   };
 
   return (
-    <>
-      <ProfileSettingsDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
       <Sidebar className="ml-2">
         <SidebarHeader>
           <div className="flex items-center gap-3 px-4 py-4">
@@ -76,7 +71,7 @@ export function AppSidebar() {
             <Button 
               variant="ghost" 
               className="w-full justify-start text-base"
-              onClick={() => setProfileDialogOpen(true)}
+              onClick={() => navigate("/settings")}
             >
               <Settings className="mr-2 h-5 w-5" />
               Settings
@@ -92,6 +87,5 @@ export function AppSidebar() {
           </div>
         </SidebarFooter>
       </Sidebar>
-    </>
   );
 }

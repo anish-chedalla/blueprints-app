@@ -1,305 +1,117 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, DollarSign, CheckCircle2, TrendingUp, Lightbulb, ArrowRight, Layers } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Award, DollarSign, BookmarkCheck, TrendingUp, Lightbulb, ArrowRight, Layers, History } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { VERIFIED_LOAN_FALLBACK } from "@/data/verified-loans";
+import { searchFederalGrants } from "@/lib/grants-gov";
+import { isProgramAvailable } from "@/lib/program-availability";
+import { latestUniqueViews, loadViewHistory, recordHistoryRevisit, type ViewHistoryItem } from "@/lib/view-history";
 import blueprintBg from "@/assets/blueprint-bg.jpg";
 
+const LIVE_GRANT_QUERY = {
+  status: "posted" as const,
+  eligibility: "22|23|99",
+  instrument: "G" as const,
+  page: 0,
+  rows: 1,
+};
+
 export default function Dashboard() {
-  const [recentGrants, setRecentGrants] = useState<Tables<"programs">[]>([]);
-  const [recentLoans, setRecentLoans] = useState<Tables<"programs">[]>([]);
+  const [recentGrants, setRecentGrants] = useState<ViewHistoryItem[]>([]);
+  const [recentLoans, setRecentLoans] = useState<ViewHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [grantsCount, setGrantsCount] = useState(0);
   const [loansCount, setLoansCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [newThisWeekCount, setNewThisWeekCount] = useState(0);
+  const [federalConnected, setFederalConnected] = useState(true);
   const navigate = useNavigate();
 
   const fetchDashboardData = useCallback(async (userId: string) => {
     setLoading(true);
     try {
-      // Fetch recent grants
-      const { data: grantsData } = await supabase
-        .from("programs")
-        .select("*")
-        .eq("type", "GRANT")
-        .not("source_id", "is", null)
-        .neq("status", "CLOSED")
-        .order("created_at", { ascending: false })
-        .limit(2);
+      const [catalogResult, savedResult, history, federalActive, federalNew] = await Promise.all([
+        supabase.from("programs").select("*").not("source_id", "is", null),
+        supabase.from("saved_opportunities").select("*", { count: "exact", head: true }).eq("user_id", userId),
+        loadViewHistory(userId),
+        searchFederalGrants(LIVE_GRANT_QUERY).catch(() => null),
+        searchFederalGrants({ ...LIVE_GRANT_QUERY, dateRange: "7" }).catch(() => null),
+      ]);
+      if (catalogResult.error) throw catalogResult.error;
+      if (savedResult.error) throw savedResult.error;
 
-      // Fetch recent loans
-      const { data: loansData } = await supabase
-        .from("programs")
-        .select("*")
-        .eq("type", "LOAN")
-        .order("created_at", { ascending: false })
-        .limit(2);
+      const catalog = (catalogResult.data || []).filter((program) => isProgramAvailable(program));
+      const curatedGrants = catalog.filter((program) => program.type === "GRANT" && program.source_kind !== "api" && !program.source_id?.startsWith("grants-gov:"));
+      const databaseLoans = catalog.filter((program) => program.type === "LOAN" && program.source_url && program.last_verified_at);
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const newlyCataloged = [...curatedGrants, ...databaseLoans].filter((program) => new Date(program.created_at).getTime() >= oneWeekAgo).length;
 
-      // Count all grants
-      const { count: grantsTotal } = await supabase
-        .from("programs")
-        .select("*", { count: "exact", head: true })
-        .eq("type", "GRANT")
-        .not("source_id", "is", null)
-        .neq("status", "CLOSED");
-
-      // Count all loans
-      const { count: loansTotal } = await supabase
-        .from("programs")
-        .select("*", { count: "exact", head: true })
-        .eq("type", "LOAN");
-
-      // Count saved items
-      const { count: savedTotal } = await supabase
-        .from("saved_opportunities")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
-
-      // Count new items this week
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      const { count: newThisWeek } = await supabase
-        .from("programs")
-        .select("*", { count: "exact", head: true })
-        .eq("type", "GRANT")
-        .not("source_id", "is", null)
-        .neq("status", "CLOSED")
-        .gte("created_at", oneWeekAgo.toISOString());
-
-      setRecentGrants(grantsData || []);
-      setRecentLoans(loansData || []);
-      setGrantsCount(grantsTotal || 0);
-      setLoansCount(loansTotal || 0);
-      setSavedCount(savedTotal || 0);
-      setNewThisWeekCount(newThisWeek || 0);
-    } catch {
+      setGrantsCount((federalActive?.hitCount || 0) + curatedGrants.length);
+      setFederalConnected(Boolean(federalActive && federalNew));
+      setLoansCount(databaseLoans.length || VERIFIED_LOAN_FALLBACK.filter((program) => isProgramAvailable(program)).length);
+      setSavedCount(savedResult.count || 0);
+      setNewThisWeekCount((federalNew?.hitCount || 0) + newlyCataloged);
+      setRecentGrants(latestUniqueViews(history, "GRANT"));
+      setRecentLoans(latestUniqueViews(history, "LOAN"));
+    } catch (error) {
+      console.error(error);
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const checkAuth = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast.error("Please sign in to view your dashboard");
-      navigate("/auth");
-      return;
-    }
-    await fetchDashboardData(session.user.id);
+  useEffect(() => {
+    const initialize = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { navigate("/auth"); return; }
+      await fetchDashboardData(session.user.id);
+    };
+    void initialize();
   }, [fetchDashboardData, navigate]);
 
-  useEffect(() => {
-    void checkAuth();
-  }, [checkAuth]);
+  const openRecent = (item: ViewHistoryItem) => {
+    void recordHistoryRevisit(item);
+    if (item.internal_url) navigate(item.internal_url);
+    else window.open(item.official_url, "_blank", "noopener,noreferrer");
+  };
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="p-8">
-          <p className="text-center text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  if (loading) return <DashboardLayout><div className="p-12 text-center text-muted-foreground">Loading your dashboard…</div></DashboardLayout>;
 
-  return (
-    <DashboardLayout>
-      <div className="relative min-h-full">
-        {/* Blueprint Background */}
-        <div 
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: `url(${blueprintBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        />
-        
-        <div className="relative z-10">
-          <div className="p-8 space-y-8">
-              {/* Hero Section */}
-              <div className="max-w-4xl">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-6">
-                  <Layers className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                    Arizona Grant Discovery
-                  </span>
-                </div>
-                
-                <h1 className="text-5xl font-bold mb-4">
-                  Your Blueprint for Success
-                </h1>
-                
-                <p className="text-xl text-muted-foreground mb-8 max-w-2xl">
-                  Search official grant sources, understand eligibility, and track every serious opportunity.
-                </p>
-                
-                <div className="flex items-center gap-3">
-                  <Button size="lg" asChild className="group">
-                    <Link to="/grants">
-                      Explore Grants
-                      <ArrowRight className="ml-2 w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild className="group">
-                    <Link to="/idea-lab">
-                      <Lightbulb className="mr-2 w-4 h-4 transition-all duration-200 group-hover:text-primary" />
-                      Review Match Profile
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+  const stats = [
+    { label: "Active grants", value: grantsCount, detail: federalConnected ? "Live federal + current catalog" : "Catalog only · federal unavailable", icon: Award },
+    { label: "Loan programs", value: loansCount, detail: "Verified catalog", icon: DollarSign },
+    { label: "Saved items", value: savedCount, detail: "Grants and loans", icon: BookmarkCheck },
+    { label: "New this week", value: newThisWeekCount, detail: federalConnected ? "Posted or cataloged in 7 days" : "Cataloged in 7 days · federal unavailable", icon: TrendingUp },
+  ];
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-card/60 backdrop-blur-sm border-border/50 hover-lift stagger-1">
-                  <CardHeader className="space-y-4">
-                    <div className="w-12 h-12 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-primary/50">
-                      <Award className="w-6 h-6 text-primary transition-transform duration-300" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        ACTIVE GRANTS
-                      </p>
-                      <p className="text-4xl font-bold transition-colors duration-200 group-hover:text-primary">{grantsCount}</p>
-                      <p className="text-sm text-muted-foreground">Available now</p>
-                    </div>
-                  </CardHeader>
-                </Card>
-                <Card className="bg-card/60 backdrop-blur-sm border-border/50 hover-lift stagger-2">
-                  <CardHeader className="space-y-4">
-                    <div className="w-12 h-12 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-primary/50">
-                      <DollarSign className="w-6 h-6 text-primary transition-transform duration-300" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        LOAN PROGRAMS
-                      </p>
-                      <p className="text-4xl font-bold transition-colors duration-200 group-hover:text-primary">{loansCount}</p>
-                      <p className="text-sm text-muted-foreground">Ready to apply</p>
-                    </div>
-                  </CardHeader>
-                </Card>
-                <Card className="bg-card/60 backdrop-blur-sm border-border/50 hover-lift stagger-3">
-                  <CardHeader className="space-y-4">
-                    <div className="w-12 h-12 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-primary/50">
-                      <CheckCircle2 className="w-6 h-6 text-primary transition-transform duration-300" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        SAVED ITEMS
-                      </p>
-                      <p className="text-4xl font-bold transition-colors duration-200 group-hover:text-primary">{savedCount}</p>
-                      <p className="text-sm text-muted-foreground">Tracking</p>
-                    </div>
-                  </CardHeader>
-                </Card>
-                <Card className="bg-card/60 backdrop-blur-sm border-border/50 hover-lift stagger-4">
-                  <CardHeader className="space-y-4">
-                    <div className="w-12 h-12 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:border-primary/50">
-                      <TrendingUp className="w-6 h-6 text-primary transition-transform duration-300" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        NEW THIS WEEK
-                      </p>
-                      <p className="text-4xl font-bold transition-colors duration-200 group-hover:text-primary">{newThisWeekCount}</p>
-                      <p className="text-sm text-muted-foreground">Fresh opportunities</p>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </div>
+  return <DashboardLayout><div className="relative min-h-full">
+    <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url(${blueprintBg})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+    <div className="relative z-10 space-y-8 p-8">
+      <section className="max-w-4xl">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5"><Layers className="h-4 w-4 text-primary" /><span className="text-xs font-medium uppercase tracking-wide text-primary">Arizona Grant Discovery</span></div>
+        <h1 className="mb-4 text-5xl font-bold">Your Blueprint for Success</h1>
+        <p className="mb-8 max-w-2xl text-xl text-muted-foreground">Search official funding sources, understand eligibility, and return to opportunities you have actually reviewed.</p>
+        <div className="flex flex-wrap gap-3"><Button size="lg" asChild><Link to="/grants">Explore Grants<ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button size="lg" variant="outline" asChild><Link to="/settings?tab=business"><Lightbulb className="mr-2 h-4 w-4" />Review Match Profile</Link></Button></div>
+      </section>
 
-              {/* Recent Sections */}
-              <div className="grid lg:grid-cols-2 gap-8">
-                {/* Recent Grants */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center">
-                        <Award className="w-5 h-5 text-primary" />
-                      </div>
-                      <h2 className="text-2xl font-bold">RECENT GRANTS</h2>
-                    </div>
-                    <Link to="/grants" className="text-primary hover:underline text-sm font-medium">
-                      View All
-                    </Link>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {recentGrants.length === 0 ? (
-                      <Card className="bg-card/60 backdrop-blur-sm border-border/50">
-                        <CardHeader>
-                          <p className="text-muted-foreground">No grants available</p>
-                        </CardHeader>
-                      </Card>
-                    ) : (
-                      recentGrants.map((grant, index) => (
-                        <Card 
-                          key={grant.id} 
-                          className={`bg-card/60 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all duration-300 cursor-pointer hover-lift animate-fade-in-up`}
-                          style={{ animationDelay: `${index * 100}ms` }}
-                          onClick={() => navigate(`/program/${grant.id}`)}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">{grant.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{grant.sponsor}</p>
-                          </CardHeader>
-                        </Card>
-                      ))
-                    )}
-                  </div>
-                </div>
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4" aria-label="Funding summary">
+        {stats.map(({ label, value, detail, icon: Icon }) => <Card key={label} className="border-border/50 bg-card/60 backdrop-blur-sm"><CardHeader className="space-y-4"><div className="flex h-12 w-12 items-center justify-center rounded-lg border bg-background/50"><Icon className="h-6 w-6 text-primary" /></div><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className="text-4xl font-bold">{value.toLocaleString()}</p><p className="text-sm text-muted-foreground">{detail}</p></div></CardHeader></Card>)}
+      </section>
 
-                {/* Recent Loans */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg border border-border/50 bg-background/50 flex items-center justify-center">
-                        <DollarSign className="w-5 h-5 text-primary" />
-                      </div>
-                      <h2 className="text-2xl font-bold">RECENT LOANS</h2>
-                    </div>
-                    <Link to="/loans" className="text-primary hover:underline text-sm font-medium">
-                      View All
-                    </Link>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {recentLoans.length === 0 ? (
-                      <Card className="bg-card/60 backdrop-blur-sm border-border/50">
-                        <CardHeader>
-                          <p className="text-muted-foreground">No loans available</p>
-                        </CardHeader>
-                      </Card>
-                    ) : (
-                      recentLoans.map((loan, index) => (
-                        <Card 
-                          key={loan.id}
-                          className={`bg-card/60 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all duration-300 cursor-pointer hover-lift animate-fade-in-up`}
-                          style={{ animationDelay: `${index * 100}ms` }}
-                          onClick={() => navigate(`/program/${loan.id}`)}
-                        >
-                          <CardHeader>
-                            <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">{loan.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{loan.sponsor}</p>
-                          </CardHeader>
-                        </Card>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+      <section className="grid gap-8 lg:grid-cols-2">
+        <RecentViews title="Recently viewed grants" items={recentGrants} icon={Award} empty="Open a grant to see it here." onOpen={openRecent} />
+        <RecentViews title="Recently viewed loans" items={recentLoans} icon={DollarSign} empty="Open a loan to see it here." onOpen={openRecent} />
+      </section>
+      <div className="flex justify-end"><Button asChild variant="outline"><Link to="/history"><History className="mr-2 h-4 w-4" />View complete history</Link></Button></div>
+    </div>
+  </div></DashboardLayout>;
+}
+
+function RecentViews({ title, items, icon: Icon, empty, onOpen }: { title: string; items: ViewHistoryItem[]; icon: typeof Award; empty: string; onOpen: (item: ViewHistoryItem) => void }) {
+  return <div className="space-y-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-background/50"><Icon className="h-5 w-5 text-primary" /></div><h2 className="text-2xl font-bold">{title}</h2></div><div className="space-y-4">{items.length === 0 ? <Card className="bg-card/60"><CardHeader><p className="text-muted-foreground">{empty}</p></CardHeader></Card> : items.map((item) => <Card key={item.id} className="cursor-pointer bg-card/60 transition hover:border-primary/50" onClick={() => onOpen(item)}><CardHeader><CardTitle className="text-lg">{item.title}</CardTitle><p className="text-sm text-muted-foreground">{item.sponsor} · viewed {new Date(item.viewed_at).toLocaleString()}</p></CardHeader></Card>)}</div></div>;
 }

@@ -1,11 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, ExternalLink, Calendar, DollarSign, MapPin } from "lucide-react";
+import { Bookmark, BookmarkCheck, ExternalLink, Calendar, DollarSign, MapPin } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { curatedProgramToOpportunity, serializeOpportunity } from "@/lib/opportunities";
+import { recordOpportunityView } from "@/lib/view-history";
 
 interface ProgramCardProps {
   program: {
@@ -22,6 +24,8 @@ interface ProgramCardProps {
     status: string;
     city?: string | null;
     county?: string | null;
+    url: string;
+    source_id?: string | null;
     source_url?: string | null;
     last_verified_at?: string | null;
   };
@@ -48,27 +52,34 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
     try {
       if (isFavorite) {
         const { error } = await supabase
-          .from("favorites")
+          .from("saved_opportunities")
           .delete()
           .eq("user_id", session.user.id)
-          .eq("program_id", program.id);
+          .eq("source", "blueprints")
+          .eq("external_id", program.source_id || program.id);
 
         if (error) throw error;
-        toast.success("Removed from favorites");
+        toast.success("Removed from saved funding");
       } else {
+        const opportunity = curatedProgramToOpportunity(program as Parameters<typeof curatedProgramToOpportunity>[0]);
         const { error } = await supabase
-          .from("favorites")
-          .insert({ user_id: session.user.id, program_id: program.id });
+          .from("saved_opportunities")
+          .upsert({ ...serializeOpportunity(opportunity), user_id: session.user.id }, { onConflict: "user_id,source,external_id" });
 
         if (error) throw error;
-        toast.success("Added to favorites");
+        toast.success("Saved to your funding list");
       }
       onFavoriteToggle?.();
     } catch (error) {
-      toast.error("Failed to update favorites");
+      toast.error("Failed to update saved funding");
     } finally {
       setLoading(false);
     }
+  };
+  const opportunity = curatedProgramToOpportunity(program as Parameters<typeof curatedProgramToOpportunity>[0]);
+  const openDetails = () => {
+    void recordOpportunityView(opportunity);
+    navigate(`/program/${program.id}`);
   };
 
   const formatAmount = (min?: number | null, max?: number | null) => {
@@ -91,7 +102,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
   return (
     <Card 
       className={`hover-lift transition-all duration-300 group border-border/50 hover:border-primary/30 ${externalOnly ? "" : "cursor-pointer"}`}
-      onClick={externalOnly ? undefined : () => navigate(`/program/${program.id}`)}
+      onClick={externalOnly ? undefined : openDetails}
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
@@ -118,11 +129,11 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
             disabled={loading}
             className="shrink-0 hover:scale-110 transition-transform duration-200"
           >
-            <Heart
+            {isFavorite ? <BookmarkCheck
               className={`h-5 w-5 transition-all duration-200 ${
-                isFavorite ? "fill-red-500 text-red-500 scale-110" : "text-muted-foreground hover:text-red-500"
+                "text-primary scale-110"
               }`}
-            />
+            /> : <Bookmark className="h-5 w-5 text-muted-foreground hover:text-primary" />}
           </Button>}
         </div>
       </CardHeader>
@@ -167,7 +178,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
 
         {externalOnly ? (
           <Button asChild variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-            <a href={program.source_url} target="_blank" rel="noopener noreferrer">
+            <a href={program.source_url || program.url} target="_blank" rel="noopener noreferrer" onClick={() => void recordOpportunityView(opportunity)}>
               <span>Open official program</span>
               <ExternalLink className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
             </a>

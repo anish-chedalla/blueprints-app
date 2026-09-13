@@ -17,7 +17,7 @@ const normalize = (value: string) => value.trim().toLowerCase();
 
 export default function Loans() {
   const [programs, setPrograms] = useState<Tables<"programs">[]>([]);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [usingFallback, setUsingFallback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,24 +89,24 @@ export default function Loans() {
     }
   }, [filters, searchQuery]);
 
-  const fetchFavorites = useCallback(async () => {
+  const fetchSaved = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     const { data } = await supabase
-      .from("favorites")
-      .select("program_id")
+      .from("saved_opportunities")
+      .select("source,external_id")
       .eq("user_id", session.user.id);
 
     if (data) {
-      setFavorites(new Set(data.map(f => f.program_id)));
+      setSavedKeys(new Set(data.map((item) => `${item.source}:${item.external_id}`)));
     }
   }, []);
 
   useEffect(() => {
     void fetchPrograms();
-    void fetchFavorites();
-  }, [fetchFavorites, fetchPrograms]);
+    void fetchSaved();
+  }, [fetchPrograms, fetchSaved]);
 
   return (
     <DashboardLayout>
@@ -160,8 +160,8 @@ export default function Loans() {
                     <ProgramCard
                       key={program.id}
                       program={program}
-                      isFavorite={favorites.has(program.id)}
-                      onFavoriteToggle={fetchFavorites}
+                      isFavorite={savedKeys.has(`blueprints:${program.source_id || program.id}`)}
+                      onFavoriteToggle={fetchSaved}
                       externalOnly={program.id.startsWith("catalog:")}
                     />
                   ))}

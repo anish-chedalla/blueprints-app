@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { evaluateEligibility } from "@/lib/eligibility";
 import { isArizonaOpportunity, matchesCuratedApplicantFilter, matchesFundingCategory } from "@/lib/grant-taxonomy";
-import { FEDERAL_GRANT_CATEGORIES, FEDERAL_GRANT_PAGE_SIZE, fetchFederalGrantDetails, searchFederalGrants, type FederalGrantSearchParams } from "@/lib/grants-gov";
+import { FEDERAL_GRANT_CATEGORIES, FEDERAL_GRANT_PAGE_SIZE, federalAgencySearchValue, fetchFederalGrantDetails, searchFederalGrants, type FederalGrantSearchParams } from "@/lib/grants-gov";
 import { isProgramAvailable } from "@/lib/program-availability";
 import { curatedProgramToOpportunity, federalDetailToOpportunity, federalHitToOpportunity, opportunityKey, serializeOpportunity, type Opportunity } from "@/lib/opportunities";
 import { useQuery } from "@tanstack/react-query";
@@ -70,16 +70,38 @@ export default function Grants() {
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
 
+  const facetParams = useMemo<FederalGrantSearchParams>(() => ({
+    keyword: submittedSearch,
+    status: federalFilters.status,
+    eligibility: federalFilters.eligibility === "all" ? undefined : federalFilters.eligibility,
+    category: federalFilters.category || undefined,
+    instrument: "G",
+    page: 0,
+    rows: 1,
+  }), [federalFilters.category, federalFilters.eligibility, federalFilters.status, submittedSearch]);
+  const facetsQuery = useQuery({
+    queryKey: ["grants-gov-filter-options", facetParams],
+    queryFn: ({ signal }) => searchFederalGrants(facetParams, signal),
+    enabled: sourceFilter === "all" || sourceFilter === "federal",
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  const agencyOptions = useMemo(() => facetsQuery.data?.agencies || [], [facetsQuery.data?.agencies]);
+  const agencyQueryValue = useMemo(
+    () => federalAgencySearchValue(federalFilters.agency, agencyOptions),
+    [agencyOptions, federalFilters.agency],
+  );
+
   const federalParams = useMemo<FederalGrantSearchParams>(() => ({
     keyword: submittedSearch,
     status: federalFilters.status,
     eligibility: federalFilters.eligibility === "all" ? undefined : federalFilters.eligibility,
     category: federalFilters.category || undefined,
-    agency: federalFilters.agency || undefined,
+    agency: agencyQueryValue || undefined,
     instrument: "G",
     page,
     rows: FEDERAL_GRANT_PAGE_SIZE,
-  }), [federalFilters, page, submittedSearch]);
+  }), [agencyQueryValue, federalFilters, page, submittedSearch]);
 
   const federalQuery = useQuery({
     queryKey: ["unified-grants-gov", federalParams],
@@ -93,7 +115,7 @@ export default function Grants() {
     queryFn: async () => {
       const { data, error } = await supabase.from("programs").select("*").eq("type", "GRANT").not("source_id", "is", null);
       if (error) throw error;
-      return data;
+      return (data || []).filter((program) => program.source_kind !== "api" && !program.source_id?.startsWith("grants-gov:"));
     },
     enabled: sourceFilter !== "federal",
     staleTime: 5 * 60 * 1000,
@@ -108,20 +130,6 @@ export default function Grants() {
     staleTime: 30 * 60 * 1000,
   });
 
-  const facetParams = useMemo<FederalGrantSearchParams>(() => ({
-    status: federalFilters.status,
-    eligibility: federalFilters.eligibility === "all" ? undefined : federalFilters.eligibility,
-    instrument: "G",
-    page: 0,
-    rows: 1,
-  }), [federalFilters.eligibility, federalFilters.status]);
-  const facetsQuery = useQuery({
-    queryKey: ["grants-gov-filter-options", facetParams],
-    queryFn: ({ signal }) => searchFederalGrants(facetParams, signal),
-    enabled: sourceFilter === "all" || sourceFilter === "federal",
-    staleTime: 15 * 60 * 1000,
-    retry: 1,
-  });
   const federalIds = useMemo(
     () => (federalQuery.data?.opportunities || []).map((item) => item.id),
     [federalQuery.data?.opportunities],
@@ -136,7 +144,6 @@ export default function Grants() {
   const categoryOptions = (sourceFilter === "all" || sourceFilter === "federal") && facetsQuery.data?.fundingCategories.length
     ? facetsQuery.data.fundingCategories
     : FEDERAL_GRANT_CATEGORIES.map((item) => ({ ...item, count: 0 }));
-  const agencyOptions = facetsQuery.data?.agencies || [];
 
   const opportunities = useMemo(() => {
     const query = submittedSearch.trim().toLowerCase();
@@ -191,12 +198,12 @@ export default function Grants() {
         const { error } = await supabase.from("saved_opportunities").delete().eq("user_id", user.id).eq("source", opportunity.source).eq("external_id", opportunity.externalId);
         if (error) throw error;
         setSavedKeys((current) => { const next = new Set(current); next.delete(opportunity.key); return next; });
-        toast.success("Removed from your funding pipeline");
+        toast.success("Removed from saved funding");
       } else {
         const { error } = await supabase.from("saved_opportunities").upsert({ ...serializeOpportunity(opportunity), user_id: user.id }, { onConflict: "user_id,source,external_id" });
         if (error) throw error;
         setSavedKeys((current) => new Set(current).add(opportunity.key));
-        toast.success("Saved to your funding pipeline");
+        toast.success("Saved to your funding list");
       }
     } catch (error) { console.error(error); toast.error("Could not update this opportunity"); }
     finally { setSavingKey(null); }
@@ -230,7 +237,7 @@ export default function Grants() {
                 <div className="space-y-2"><Label>Source region</Label><Select value={sourceFilter} onValueChange={(value) => { const next = value as SourceFilter; setSourceFilter(next); setFederalFilters((current) => ({ ...current, agency: next === "arizona" || next === "other" ? "" : current.agency })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All sources</SelectItem><SelectItem value="federal">Federal · live Grants.gov</SelectItem><SelectItem value="arizona">Arizona · official programs</SelectItem><SelectItem value="other">Other direct funders</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Applicant type</Label><Select value={federalFilters.eligibility} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, eligibility: value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="22|23|99">Businesses · broad</SelectItem><SelectItem value="23">Small businesses</SelectItem><SelectItem value="22">Other for-profit businesses</SelectItem><SelectItem value="99">Unrestricted applicants</SelectItem><SelectItem value="all">All applicant types</SelectItem></SelectContent></Select></div>
                 <div className="space-y-2"><Label>Funding category</Label><Select value={federalFilters.category || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, category: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categoryOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}{item.count > 0 ? ` (${item.count})` : ""}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Federal agency</Label><Select disabled={sourceFilter === "arizona" || sourceFilter === "other" || (facetsQuery.isSuccess && agencyOptions.length === 0)} value={federalFilters.agency || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, agency: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue placeholder={facetsQuery.isLoading ? "Loading active agencies…" : "All active agencies"} /></SelectTrigger><SelectContent><SelectItem value="all">All active agencies</SelectItem>{agencyOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label} ({item.count})</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Federal agency</Label><Select disabled={sourceFilter === "arizona" || sourceFilter === "other" || facetsQuery.isFetching || (facetsQuery.isSuccess && agencyOptions.length === 0)} value={federalFilters.agency || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, agency: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue placeholder={facetsQuery.isFetching ? "Loading matching agencies…" : "All matching agencies"} /></SelectTrigger><SelectContent><SelectItem value="all">All matching agencies</SelectItem>{agencyOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label} ({item.count})</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Only agencies with results for the current search are shown. Parent agencies automatically include their listed sub-agencies.</p></div>
                 <div className="space-y-2"><Label>Sort</Label><Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="match">Best profile match</SelectItem><SelectItem value="deadline">Deadline soonest</SelectItem><SelectItem value="newest">Latest deadline</SelectItem></SelectContent></Select></div>
               </div>
               {federalFilters.category && (sourceFilter === "all" || sourceFilter === "federal") && <p className="text-xs text-muted-foreground">Federal categories are official Grants.gov classifications. A title may not contain the category word; open the full record to see the categorized activity and scope.</p>}

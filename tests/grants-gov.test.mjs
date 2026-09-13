@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   fetchFederalGrantDetail,
+  federalAgencySearchValue,
   grantsGovOpportunityUrl,
   htmlToPlainText,
   normalizeGrantDate,
@@ -66,6 +67,7 @@ test("searchFederalGrants reads the nested API response and sends a browser-simp
     eligibilities: "23|99",
     fundingCategories: "",
     agencies: "",
+    dateRange: "",
     fundingInstruments: "G",
   });
   assert.equal(result.hitCount, 415);
@@ -80,6 +82,21 @@ test("searchFederalGrants reads the nested API response and sends a browser-simp
     count: 3,
     subAgencies: [{ label: "NOAA", value: "DOC-NOAA", count: 3 }],
   }]);
+});
+
+test("federalAgencySearchValue expands a parent agency into searchable leaf codes", () => {
+  const agencies = [{
+    label: "Department of Defense",
+    value: "DOD",
+    count: 86,
+    subAgencies: [
+      { label: "Air Force Research Lab", value: "DOD-AFRL", count: 5 },
+      { label: "Defense Health Agency", value: "DOD-AMRAA", count: 75 },
+    ],
+  }];
+  assert.equal(federalAgencySearchValue("DOD", agencies), "DOD-AFRL|DOD-AMRAA");
+  assert.equal(federalAgencySearchValue("", agencies), "");
+  assert.equal(federalAgencySearchValue("STALE", agencies), "");
 });
 
 test("fetchFederalGrantDetail normalizes important opportunity fields", async (t) => {
@@ -98,7 +115,7 @@ test("fetchFederalGrantDetail normalizes important opportunity fields", async (t
       opportunityCategory: { description: "Discretionary" },
       agencyDetails: { agencyName: "National Institutes of Health" },
       synopsis: {
-        agencyName: "National Institutes of Health",
+        agencyName: "Grantor Contact Name",
         synopsisDesc: "<p>Detailed <strong>funding</strong> overview.</p>",
         postingDateStr: "2024-11-21-00-00-00",
         responseDateStr: "2026-11-17-00-00-00",

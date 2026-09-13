@@ -157,8 +157,8 @@ export default function FederalGrantDetail() {
         if (error) throw error;
         setSaved(true);
       }
-      toast.success(saved ? "Removed from pipeline" : "Saved to pipeline");
-    } catch (error) { console.error(error); toast.error("Could not update your pipeline"); }
+      toast.success(saved ? "Removed from saved funding" : "Saved to your funding list");
+    } catch (error) { console.error(error); toast.error("Could not update saved funding"); }
     finally { setSaving(false); }
   };
 
@@ -184,7 +184,7 @@ export default function FederalGrantDetail() {
           <div className="mt-6 flex flex-wrap gap-3">
             <Button variant="outline" onClick={toggleSaved} disabled={saving}>
               {saved ? <BookmarkCheck className="mr-2 h-4 w-4" /> : <Bookmark className="mr-2 h-4 w-4" />}
-              {saved ? "Saved to pipeline" : "Save and track"}
+              {saved ? "Saved" : "Save and track"}
             </Button>
             <Button asChild>
               <a href={grant.officialUrl} target="_blank" rel="noreferrer">

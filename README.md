@@ -7,7 +7,8 @@
 - **Unified Grant Search**: Search live Grants.gov, Arizona-specific official programs, and direct-funder opportunities in one result set
 - **Explainable Eligibility**: See likely matches, possible conflicts, missing profile facts, and the reason behind each score
 - **Source Provenance**: Every normalized record carries its source, official URL, verification method, and last-reviewed time
-- **Funding Pipeline**: Save live federal and reviewed opportunities and track them from research through award or decline
+- **Saved Funding**: Keep grants and loans together, add reminders, and track each opportunity through award or decline
+- **Private viewing history**: Dashboard recents and a searchable History page reflect opportunities the signed-in user actually opened
 - **Saved Searches & Reminders**: Persist exact criteria, schedule in-app reminders, and optionally send email through the alert worker
 - **Arizona Coverage Registry**: Distinguish live APIs from official pages that require human review
 - **Verified Loan Directory**: Browse current SBA, USDA, Arizona state, and mission-lender programs with official links and verification dates

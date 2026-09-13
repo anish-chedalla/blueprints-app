@@ -23,6 +23,8 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const IdeaLab = lazy(() => import("./pages/IdeaLab"));
 const Assistant = lazy(() => import("./pages/Assistant"));
 const Saved = lazy(() => import("./pages/Saved"));
+const History = lazy(() => import("./pages/History"));
+const Settings = lazy(() => import("./pages/Settings"));
 const Licensing = lazy(() => import("./pages/Licensing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -59,6 +61,16 @@ const App = () => missingSupabaseVariables.length > 0 ? (
             <Route path="/saved" element={
               <ProtectedRoute>
                 <Saved />
+              </ProtectedRoute>
+            } />
+            <Route path="/history" element={
+              <ProtectedRoute>
+                <History />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             <Route path="/licensing" element={
