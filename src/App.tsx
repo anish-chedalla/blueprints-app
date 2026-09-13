@@ -17,6 +17,8 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ProgramDetail = lazy(() => import("./pages/ProgramDetail"));
 const FederalGrantDetail = lazy(() => import("./pages/FederalGrantDetail"));
 const Auth = lazy(() => import("./pages/Auth"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const IdeaLab = lazy(() => import("./pages/IdeaLab"));
 const Assistant = lazy(() => import("./pages/Assistant"));
@@ -72,6 +74,8 @@ const App = () => missingSupabaseVariables.length > 0 ? (
             <Route path="/program/:id" element={<ProgramDetail />} />
             <Route path="/federal-grant/:id" element={<FederalGrantDetail />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<NotFound />} />
             </Routes>

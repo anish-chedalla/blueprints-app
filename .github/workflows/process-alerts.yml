@@ -1,0 +1,46 @@
+name: Process funding email alerts
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: process-funding-email-alerts
+  cancel-in-progress: false
+
+jobs:
+  process-alerts:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      ALERT_CRON_SECRET: ${{ secrets.ALERT_CRON_SECRET }}
+    steps:
+      - name: Verify alert worker configuration
+        shell: bash
+        run: |
+          missing=0
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY ALERT_CRON_SECRET; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required repository secret: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Check saved searches and send due emails
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --header "x-alert-cron-secret: $ALERT_CRON_SECRET" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "$SUPABASE_URL/functions/v1/process-alerts"
+

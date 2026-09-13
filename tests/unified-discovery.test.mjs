@@ -37,9 +37,21 @@ test("homepage no longer simulates subscriptions or daily verification", async (
 });
 
 test("scheduled alert worker requires a second secret and supports real email", async () => {
-  const worker = await read("../supabase/functions/process-alerts/index.ts");
+  const [worker, auditMigration, schedule] = await Promise.all([
+    read("../supabase/functions/process-alerts/index.ts"),
+    read("../supabase/migrations/20260912010000_alert_delivery_observability.sql"),
+    read("../.github/workflows/process-alerts.yml"),
+  ]);
   assert.match(worker, /ALERT_CRON_SECRET/);
   assert.match(worker, /RESEND_API_KEY/);
   assert.match(worker, /saved_searches/);
   assert.match(worker, /opportunity_reminders/);
+  assert.match(worker, /Idempotency-Key/);
+  assert.match(worker, /last_event/);
+  assert.match(worker, /rows: 20/);
+  assert.match(worker, /observedIds/);
+  assert.match(auditMigration, /CREATE TABLE IF NOT EXISTS public\.alert_deliveries/);
+  assert.match(auditMigration, /Users can view own alert deliveries/);
+  assert.match(schedule, /cron: "17 \* \* \* \*"/);
+  assert.match(schedule, /SUPABASE_SERVICE_ROLE_KEY/);
 });

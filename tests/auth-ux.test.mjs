@@ -14,6 +14,24 @@ test("auth page provides public escape routes and an inline error region", async
   assert.match(authPage, /Back to home/);
   assert.match(authPage, /Explore funding without an account/);
   assert.match(authPage, /role="alert"/);
+  assert.match(authPage, /Forgot password\?/);
+  assert.match(authPage, /signInWithOAuth/);
+  assert.match(authPage, /provider: "google"/);
+});
+
+test("password recovery has request and update flows with app-safe redirects", async () => {
+  const [forgotPage, resetPage, app] = await Promise.all([
+    read("src/pages/ForgotPassword.tsx"),
+    read("src/pages/ResetPassword.tsx"),
+    read("src/App.tsx"),
+  ]);
+
+  assert.match(forgotPage, /resetPasswordForEmail/);
+  assert.match(forgotPage, /appUrl\("reset-password"\)/);
+  assert.match(resetPage, /updateUser\(\{ password \}\)/);
+  assert.match(resetPage, /PASSWORD_RECOVERY/);
+  assert.match(app, /path="\/forgot-password"/);
+  assert.match(app, /path="\/reset-password"/);
 });
 
 test("auth failures are translated into actionable messages", () => {

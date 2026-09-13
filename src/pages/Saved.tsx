@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { savedRowToOpportunity } from "@/lib/opportunities";
 import type { User } from "@supabase/supabase-js";
-import { BellRing, Bookmark, CalendarClock, ExternalLink, Search, Trash2 } from "lucide-react";
+import { BellRing, Bookmark, CalendarClock, ExternalLink, MailCheck, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 type SavedRow = Tables<"saved_opportunities">;
 type ReminderRow = Tables<"opportunity_reminders">;
 type SearchRow = Tables<"saved_searches">;
+type DeliveryRow = Tables<"alert_deliveries">;
 const PIPELINE = ["saved", "researching", "applying", "submitted", "awarded", "declined"];
 
 export default function Saved() {
@@ -28,6 +29,7 @@ export default function Saved() {
   const [saved, setSaved] = useState<SavedRow[]>([]);
   const [reminders, setReminders] = useState<ReminderRow[]>([]);
   const [searches, setSearches] = useState<SearchRow[]>([]);
+  const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
   const [loans, setLoans] = useState<Tables<"programs">[]>([]);
   const [loanFavoriteIds, setLoanFavoriteIds] = useState<Set<string>>(new Set());
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, string>>({});
@@ -37,18 +39,21 @@ export default function Saved() {
   const loadData = useCallback(async (activeUser: User) => {
     setLoading(true);
     try {
-      const [savedResult, reminderResult, searchResult, favoriteResult] = await Promise.all([
+      const [savedResult, reminderResult, searchResult, favoriteResult, deliveryResult] = await Promise.all([
         supabase.from("saved_opportunities").select("*").eq("user_id", activeUser.id).order("updated_at", { ascending: false }),
         supabase.from("opportunity_reminders").select("*").eq("user_id", activeUser.id).is("dismissed_at", null).order("remind_at"),
         supabase.from("saved_searches").select("*").eq("user_id", activeUser.id).order("created_at", { ascending: false }),
         supabase.from("favorites").select("program_id").eq("user_id", activeUser.id),
+        supabase.from("alert_deliveries").select("*").eq("user_id", activeUser.id).order("created_at", { ascending: false }).limit(10),
       ]);
       if (savedResult.error) throw savedResult.error;
       if (reminderResult.error) throw reminderResult.error;
       if (searchResult.error) throw searchResult.error;
+      if (deliveryResult.error) throw deliveryResult.error;
       setSaved(savedResult.data || []);
       setReminders(reminderResult.data || []);
       setSearches(searchResult.data || []);
+      setDeliveries(deliveryResult.data || []);
       const ids = (favoriteResult.data || []).map((item) => item.program_id);
       setLoanFavoriteIds(new Set(ids));
       if (ids.length) {
@@ -131,8 +136,12 @@ export default function Saved() {
             })}</div>}
           </TabsContent>
           <TabsContent value="alerts" className="space-y-6">
-            <section><h2 className="mb-3 text-xl font-semibold">Opportunity reminders</h2>{reminders.length === 0 ? <p className="text-muted-foreground">No reminders scheduled.</p> : <div className="space-y-3">{reminders.map((reminder) => { const item = saved.find((row) => row.id === reminder.saved_opportunity_id); const due = new Date(reminder.remind_at).getTime() <= Date.now(); return <Card key={reminder.id} className={due ? "border-amber-300 bg-amber-50" : ""}><CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6"><div><p className="font-medium">{item?.title || "Saved opportunity"}</p><p className="text-sm text-muted-foreground">{due ? "Due" : "Scheduled"} {new Date(reminder.remind_at).toLocaleString()}</p></div><Button size="sm" variant="outline" onClick={() => dismissReminder(reminder.id)}>Dismiss</Button></CardContent></Card>; })}</div>}</section>
-            <section><h2 className="mb-3 text-xl font-semibold">Saved searches</h2>{searches.length === 0 ? <p className="text-muted-foreground">Save a search from Grant Finder to monitor it.</p> : <div className="space-y-3">{searches.map((search) => <Card key={search.id}><CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6"><div><p className="font-medium">{search.name}</p><p className="text-sm text-muted-foreground">{search.email_enabled ? "Email alerts enabled" : "Saved without email"}{search.last_checked_at ? ` · last checked ${new Date(search.last_checked_at).toLocaleString()}` : ""}</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => toggleSearchEmail(search)}>{search.email_enabled ? "Mute email" : "Enable email"}</Button><Button size="icon" variant="ghost" onClick={() => deleteSearch(search.id)}><Trash2 className="h-4 w-4" /></Button></div></CardContent></Card>)}</div>}</section>
+            <section><h2 className="mb-3 text-xl font-semibold">Opportunity reminders</h2>{reminders.length === 0 ? <p className="text-muted-foreground">No reminders scheduled.</p> : <div className="space-y-3">{reminders.map((reminder) => { const item = saved.find((row) => row.id === reminder.saved_opportunity_id); const due = new Date(reminder.remind_at).getTime() <= Date.now(); return <Card key={reminder.id} className={due ? "border-amber-300 bg-amber-50" : ""}><CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6"><div><p className="font-medium">{item?.title || "Saved opportunity"}</p><p className="text-sm text-muted-foreground">{due ? "Due" : "Scheduled"} {new Date(reminder.remind_at).toLocaleString()}{reminder.email_sent_at ? ` · email sent ${new Date(reminder.email_sent_at).toLocaleString()}` : ""}</p>{reminder.email_error && <p className="mt-1 text-sm text-destructive">Email retry pending: {reminder.email_error}</p>}</div><Button size="sm" variant="outline" onClick={() => dismissReminder(reminder.id)}>Dismiss</Button></CardContent></Card>; })}</div>}</section>
+            <section><div className="mb-3"><h2 className="text-xl font-semibold">Saved-search email subscriptions</h2><p className="mt-1 text-sm text-muted-foreground">Only searches you explicitly enable are checked for new results and emailed.</p></div>{searches.length === 0 ? <p className="text-muted-foreground">Save a search from Grant Finder to monitor it.</p> : <div className="space-y-3">{searches.map((search) => <Card key={search.id}><CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6"><div><p className="font-medium">{search.name}</p><p className="text-sm text-muted-foreground">{search.email_enabled ? "Email alerts enabled" : "Saved without email"}{search.last_checked_at ? ` · last checked ${new Date(search.last_checked_at).toLocaleString()}` : ""}{search.last_email_sent_at ? ` · last email ${new Date(search.last_email_sent_at).toLocaleString()}` : ""}</p>{search.last_email_error && <p className="mt-1 text-sm text-destructive">Delivery retry pending: {search.last_email_error}</p>}</div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => toggleSearchEmail(search)}>{search.email_enabled ? "Mute email" : "Enable email"}</Button><Button size="icon" variant="ghost" onClick={() => deleteSearch(search.id)} aria-label={`Delete ${search.name}`}><Trash2 className="h-4 w-4" /></Button></div></CardContent></Card>)}</div>}</section>
+            <section>
+              <div className="mb-3 flex items-center gap-2"><MailCheck className="h-5 w-5 text-primary" /><h2 className="text-xl font-semibold">Recent email delivery</h2></div>
+              {deliveries.length === 0 ? <p className="text-sm text-muted-foreground">No alert emails have been attempted yet.</p> : <div className="space-y-3">{deliveries.map((delivery) => <Card key={delivery.id}><CardContent className="flex flex-wrap items-start justify-between gap-3 pt-6"><div><p className="font-medium">{delivery.subject}</p><p className="text-sm text-muted-foreground">{delivery.kind === "saved_search" ? "Saved search" : "Reminder"} · {new Date(delivery.created_at).toLocaleString()}</p>{delivery.error_message && <p className="mt-1 text-sm text-destructive">{delivery.error_message}</p>}</div><DeliveryBadge status={delivery.status} /></CardContent></Card>)}</div>}
+            </section>
           </TabsContent>
           <TabsContent value="loans">{loans.length === 0 ? <p className="py-10 text-center text-muted-foreground">No saved loans.</p> : <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{loans.map((loan) => <ProgramCard key={loan.id} program={{ ...loan, status: loan.status || "OPEN", rolling: Boolean(loan.rolling), min_amount: loan.min_amount ?? undefined, max_amount: loan.max_amount ?? undefined, deadline: loan.deadline ?? undefined, city: loan.city ?? undefined, county: loan.county ?? undefined }} isFavorite={loanFavoriteIds.has(loan.id)} onFavoriteToggle={() => user && loadData(user)} />)}</div>}</TabsContent>
         </Tabs>
@@ -143,4 +152,10 @@ export default function Saved() {
 
 function EmptyState() {
   return <div className="rounded-xl border border-dashed py-16 text-center"><Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" /><h2 className="text-xl font-semibold">Your pipeline is empty</h2><p className="mt-2 text-muted-foreground">Search official sources and save the opportunities worth pursuing.</p><Button asChild className="mt-5"><Link to="/grants">Find grants</Link></Button></div>;
+}
+
+function DeliveryBadge({ status }: { status: string }) {
+  const successful = ["delivered", "opened", "clicked"].includes(status);
+  const failed = ["bounced", "failed", "suppressed", "complained"].includes(status);
+  return <Badge variant="outline" className={successful ? "border-emerald-300 bg-emerald-50 text-emerald-800" : failed ? "border-red-300 bg-red-50 text-red-800" : "border-sky-300 bg-sky-50 text-sky-800"}>{status.replace(/_/g, " ")}</Badge>;
 }

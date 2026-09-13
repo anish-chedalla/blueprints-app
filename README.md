@@ -157,6 +157,7 @@ If you prefer manual setup or CLI doesn't work:
    - `20260823010000_*.sql` - Secures AI and sync functions and repairs stale records
    - `20260827010000_*.sql` - Adds currently verified Arizona opportunities
    - `20260908010000_*.sql` - Adds unified saves, searches, reminders, provenance, eligibility, sources, and AZ FAST rounds
+   - `20260912010000_*.sql` - Adds email delivery status, failure visibility, and the per-user audit trail
 4. **Important:** Run all migration files to get the current schema. The source registry documents
    the actual coverage boundary; this project intentionally does not claim a complete grant dataset.
 
@@ -166,21 +167,44 @@ If you prefer manual setup or CLI doesn't work:
 
 1. **Go to Supabase Dashboard → Authentication → Providers**
 2. **Email provider should be enabled** by default
-3. **Disable Google provider** (we removed it from the app)
+3. **Enable Google** after completing the OAuth setup below
+
+#### **Google sign-in**
+
+1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview), create or select a
+   project, and configure the consent screen. Request only `openid`, `email`, and `profile`.
+2. Create an OAuth client with application type **Web application**.
+3. Add these authorized JavaScript origins:
+   - `http://localhost:8080`
+   - `https://anish-chedalla.github.io`
+4. Add this exact authorized redirect URI (Google redirects to Supabase first, not directly to Pages):
+   - `https://xekmklivcrxmkcygytiv.supabase.co/auth/v1/callback`
+5. In Supabase Dashboard → Authentication → Providers → Google, paste the Google **Client ID**
+   and **Client secret**, then enable the provider.
+
+Do not put the Google client secret in `.env`, a `VITE_` variable, or this repository. The browser
+needs no Google secret: Supabase stores it server-side. If Google keeps the app in Testing mode,
+add each tester's Google account on the OAuth consent screen.
 
 #### **Configure Email Settings (Important!)**
 
-1. **Go to Authentication → Email Templates**
-2. **For development**, you can use Supabase's built-in email service
-3. **For production**, configure a custom SMTP provider
+1. **Go to Authentication → Email Templates** and review the confirmation and password-recovery templates.
+2. **For development**, Supabase's built-in service is suitable only for limited testing.
+3. **For production**, configure custom SMTP in Authentication → SMTP Settings. Resend can provide
+   these SMTP credentials, but they are separate from the Resend API key used by grant alerts.
+4. Verify your sending domain and use a real sender on that domain. Test confirmation and password-reset
+   delivery (including spam) before opening sign-up publicly.
 
 #### **Set Site URL**
 
 1. **Go to Authentication → URL Configuration**
-2. **Site URL**: `http://localhost:8081/blueprints-app`
+2. **Production Site URL**: `https://anish-chedalla.github.io/blueprints-app/`
 3. **Redirect URLs**: Add:
-   - `http://localhost:8081/blueprints-app/`
-   - `http://localhost:8081/blueprints-app/onboarding`
+   - `https://anish-chedalla.github.io/blueprints-app/**`
+   - `http://localhost:8080/blueprints-app/**`
+
+These allowlisted routes cover Google callbacks, confirmation links, onboarding, and password recovery.
+Use the exact port printed by Vite if you intentionally run on a different port.
 
 ---
 
@@ -253,11 +277,21 @@ the primary navigation.
    supabase secrets set ALERT_CRON_SECRET=a-long-random-secret
    ```
 
-   Schedule an authenticated `POST` to `/functions/v1/process-alerts` with the Supabase service-role
-   bearer token and the same secret in `x-alert-cron-secret`. The worker sends due reminders, checks
+   The checked-in `process-alerts.yml` workflow makes an authenticated hourly `POST` to
+   `/functions/v1/process-alerts`. The worker sends due reminders, checks
    opted-in saved searches against both live federal results and the current Arizona catalog, emails
-   only newly observed matches, and records delivery timestamps. If Resend is not configured, in-app
+   only newly observed matches, and records provider message IDs and delivery status. It also uses
+   idempotency keys so a retry cannot send the same alert twice. If Resend is not configured, in-app
    reminders and saved searches continue to work without pretending an email was sent.
+
+4. **Configure the hourly GitHub Actions scheduler** in Repository Settings → Secrets and variables → Actions:
+   - `SUPABASE_URL` — the public project URL (the workflow also accepts the existing `VITE_SUPABASE_URL`)
+   - `SUPABASE_SERVICE_ROLE_KEY` — from Supabase Dashboard → Project Settings → API; never expose it to Vite
+   - `ALERT_CRON_SECRET` — exactly the same random value set on the Edge Function
+
+   Then run **Process funding email alerts** once with `workflow_dispatch`. A successful invocation proves
+   the schedule can reach the worker. The Alerts screen records whether Resend accepted, delivered, delayed,
+   bounced, or failed each message; delivery status is refreshed on the following worker run.
 
 **Alternative:** Functions auto-deploy when you push to GitHub if you have GitHub Actions set up.
 
@@ -269,24 +303,26 @@ the primary navigation.
 npm run dev
 ```
 
-The app will start at: **`http://localhost:8081/blueprints-app/`**
+The app will start at: **`http://localhost:8080/blueprints-app/`**
 
 **Important:** 
 - The URL **must include** `/blueprints-app/` at the end
-- Don't just go to `http://localhost:8081/`
+- Don't just go to `http://localhost:8080/`
 
 ---
 
 ## Verify Everything Works
 
 ### **Test Authentication**
-1. Go to `http://localhost:8081/blueprints-app/auth`
+1. Go to `http://localhost:8080/blueprints-app/auth`
 2. Sign up with an email and password
 3. You should receive a confirmation email (check spam)
 4. Sign in after confirming
+5. Use **Forgot password?**, open the emailed link, and choose a new password
+6. Use **Continue with Google** and confirm the same account returns to Blueprints
 
 ### **Test Database**
-1. Go to `http://localhost:8081/blueprints-app/grants`
+1. Go to `http://localhost:8080/blueprints-app/grants`
 2. You should see live federal results and currently available reviewed Arizona records in one result set.
 3. Go to `/loans` - you should see **17 loan programs** including:
    - State loans (AZ Small Business Loan, Women Business Loan, etc.)
@@ -299,6 +335,8 @@ The app will start at: **`http://localhost:8081/blueprints-app/`**
 2. Open `/grants`, save one federal and one Arizona opportunity, and confirm both appear in `/saved`.
 3. Change their pipeline stages and create a near-term in-app reminder.
 4. Save a search, then confirm its email preference appears in the Alerts tab.
+5. Run the **Process funding email alerts** workflow manually and inspect the recent delivery record.
+   A real saved-search email requires a newly appearing result; a due email reminder is the quickest end-to-end test.
 
 ### **Test User Features**
 1. Click the heart icon on any program to save it
@@ -388,14 +426,16 @@ Once your development environment is working, you can deploy to GitHub Pages.
      - `VITE_SUPABASE_URL`
      - `SUPABASE_ACCESS_TOKEN` (used by GitHub Actions to deploy migrations and Edge Functions)
      - `SUPABASE_DB_PASSWORD` (the production project database password)
+     - `SUPABASE_SERVICE_ROLE_KEY` (used only by the scheduled alert workflow)
+     - `ALERT_CRON_SECRET` (same value as the Edge Function secret)
 
    Without the two `SUPABASE_` deployment secrets, GitHub Pages still deploys
    the frontend, but the workflow reports that backend deployment was skipped.
 
 3. **Update Supabase Auth URLs:**
    - Go to Supabase Dashboard → Authentication → URL Configuration
-   - Add: `https://your-username.github.io/blueprints-app/`
-   - Add redirect: `https://your-username.github.io/blueprints-app/onboarding`
+   - Site URL: `https://anish-chedalla.github.io/blueprints-app/`
+   - Redirect allowlist: `https://anish-chedalla.github.io/blueprints-app/**`
 
 ### **Deploy**
 
@@ -428,7 +468,7 @@ blueprints-app/
 │   ├── lib/             # Utilities (OpenAI client, etc.)
 │   └── hooks/           # Custom React hooks
 ├── supabase/
-│   ├── functions/       # Edge Functions (AI chat, analysis)
+│   ├── functions/       # Edge Functions (grant alerts plus optional legacy AI tools)
 │   └── migrations/      # Database schema & seed data
 ├── public/              # Static assets
 └── .github/workflows/   # GitHub Actions CI/CD

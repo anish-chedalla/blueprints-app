@@ -401,11 +401,57 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_deliveries: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          kind: string
+          provider_message_id: string | null
+          reference_id: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          kind: string
+          provider_message_id?: string | null
+          reference_id: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          kind?: string
+          provider_message_id?: string | null
+          reference_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       opportunity_reminders: {
         Row: {
           created_at: string
           delivery_channels: string[]
           dismissed_at: string | null
+          email_error: string | null
           email_sent_at: string | null
           id: string
           remind_at: string
@@ -416,6 +462,7 @@ export type Database = {
           created_at?: string
           delivery_channels?: string[]
           dismissed_at?: string | null
+          email_error?: string | null
           email_sent_at?: string | null
           id?: string
           remind_at: string
@@ -426,6 +473,7 @@ export type Database = {
           created_at?: string
           delivery_channels?: string[]
           dismissed_at?: string | null
+          email_error?: string | null
           email_sent_at?: string | null
           id?: string
           remind_at?: string
@@ -508,6 +556,8 @@ export type Database = {
           email_enabled: boolean
           id: string
           last_checked_at: string | null
+          last_email_error: string | null
+          last_email_sent_at: string | null
           last_result_ids: string[]
           name: string
           updated_at: string
@@ -519,6 +569,8 @@ export type Database = {
           email_enabled?: boolean
           id?: string
           last_checked_at?: string | null
+          last_email_error?: string | null
+          last_email_sent_at?: string | null
           last_result_ids?: string[]
           name: string
           updated_at?: string
@@ -530,6 +582,8 @@ export type Database = {
           email_enabled?: boolean
           id?: string
           last_checked_at?: string | null
+          last_email_error?: string | null
+          last_email_sent_at?: string | null
           last_result_ids?: string[]
           name?: string
           updated_at?: string

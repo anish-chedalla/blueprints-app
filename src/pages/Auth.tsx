@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,16 @@ import {
 import { appUrl } from "@/lib/github-pages";
 import { getAuthErrorMessage, isAuthConnectivityError } from "@/lib/auth-errors";
 
+async function checkProfileComplete(userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("business_name")
+    .eq("user_id", userId)
+    .single();
+
+  return Boolean(data?.business_name);
+}
+
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -30,16 +40,40 @@ export default function Auth() {
   const [hasConnectivityError, setHasConnectivityError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const redirecting = useRef(false);
 
-  const checkProfileComplete = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("business_name")
-      .eq("user_id", userId)
-      .single();
-    
-    return !!data?.business_name;
-  };
+  const requestedPath = useMemo(() => {
+    const queryPath = new URLSearchParams(location.search).get("next");
+    const statePath = typeof location.state?.from === "string" ? location.state.from : null;
+    const candidate = queryPath || statePath;
+    return candidate?.startsWith("/") && !candidate.startsWith("//") ? candidate : "/dashboard";
+  }, [location.search, location.state]);
+
+  const finishSignIn = useCallback(async (userId: string) => {
+    if (redirecting.current) return;
+    redirecting.current = true;
+    const isProfileComplete = await checkProfileComplete(userId);
+    navigate(isProfileComplete ? requestedPath : "/onboarding", { replace: true });
+  }, [navigate, requestedPath]);
+
+  useEffect(() => {
+    let active = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session) void finishSignIn(data.session.user.id);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active && session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        void finishSignIn(session.user.id);
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [finishSignIn]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,14 +105,8 @@ export default function Auth() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        const isProfileComplete = await checkProfileComplete(data.user.id);
         toast.success("Signed in successfully");
-        const requestedPath = typeof location.state?.from === "string"
-          && location.state.from.startsWith("/")
-          && !location.state.from.startsWith("//")
-          ? location.state.from
-          : "/dashboard";
-        navigate(isProfileComplete ? requestedPath : "/onboarding", { replace: true });
+        await finishSignIn(data.user.id);
       }
     } catch (error: unknown) {
       const message = getAuthErrorMessage(error);
@@ -87,6 +115,30 @@ export default function Auth() {
       setHasConnectivityError(connectivityError);
       toast.error(connectivityError ? "Sign-in service unavailable" : message);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAuth = async () => {
+    setLoading(true);
+    setAuthError("");
+    setHasConnectivityError(false);
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: appUrl(`auth?next=${encodeURIComponent(requestedPath)}`),
+          scopes: "openid email profile",
+        },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      const message = getAuthErrorMessage(error);
+      const connectivityError = isAuthConnectivityError(error);
+      setAuthError(message);
+      setHasConnectivityError(connectivityError);
+      toast.error(connectivityError ? "Sign-in service unavailable" : message);
       setLoading(false);
     }
   };
@@ -167,6 +219,17 @@ export default function Auth() {
               </Alert>
             )}
 
+            <Button type="button" variant="outline" className="h-11 w-full" onClick={handleGoogleAuth} disabled={loading}>
+              <span aria-hidden="true" className="mr-2 text-base font-bold text-blue-600">G</span>
+              Continue with Google
+            </Button>
+
+            <div className="my-5 flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">or use email</span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+
             <form onSubmit={handleAuth} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
@@ -182,7 +245,14 @@ export default function Auth() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="password">Password</Label>
+                  {!isSignUp && (
+                    <Link to="/forgot-password" className="text-xs font-semibold text-sky-700 hover:text-sky-900 hover:underline">
+                      Forgot password?
+                    </Link>
+                  )}
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
