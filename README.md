@@ -4,13 +4,13 @@
 
 ## Features
 
-- **Unified Grant Search**: Search live Grants.gov results and reviewed funder opportunities in one result set
+- **Unified Grant Search**: Search live Grants.gov, Arizona-specific official programs, and direct-funder opportunities in one result set
 - **Explainable Eligibility**: See likely matches, possible conflicts, missing profile facts, and the reason behind each score
 - **Source Provenance**: Every normalized record carries its source, official URL, verification method, and last-reviewed time
 - **Funding Pipeline**: Save live federal and reviewed opportunities and track them from research through award or decline
 - **Saved Searches & Reminders**: Persist exact criteria, schedule in-app reminders, and optionally send email through the alert worker
 - **Arizona Coverage Registry**: Distinguish live APIs from official pages that require human review
-- **Secondary Loan Directory**: Browse curated loan programs without distracting from grant discovery
+- **Verified Loan Directory**: Browse current SBA, USDA, Arizona state, and mission-lender programs with official links and verification dates
 
 ## Tech Stack
 
@@ -66,15 +66,26 @@ currently necessary.
 - `opportunity_reminders` powers due reminders and optional email delivery
 
 The deterministic eligibility engine checks organization type, Arizona/city/county restrictions,
-employee and revenue limits, demographics, and industry overlap. It deliberately reports missing
-information instead of treating an AI guess as eligibility advice. Final eligibility always comes
-from the linked funder announcement.
+employee and revenue limits, demographics, and semantic industry overlap. For a signed-in user,
+the current federal result page is enriched with the full Grants.gov records before final ranking,
+so applicant categories and eligibility notes are evidence rather than title-based guesses. It
+deliberately reports missing information instead of treating an AI guess as eligibility advice.
+Final eligibility always comes from the linked funder announcement.
 
 The coverage registry currently includes Grants.gov, Arizona Commerce Authority, Arizona Commission
 on the Arts, Arizona Department of Administration/eCivis, Arizona Department of Agriculture,
-Arizona Office of Economic Opportunity, SBA validation guidance, and the NASE Growth Grant.
+Arizona Office of Economic Opportunity, SBA validation guidance, the NASE Growth Grant, WomensNet
+Amber Grants, and the documented SBIR.gov solicitation service (currently labeled unavailable while
+its API is under maintenance).
 Only Grants.gov is queried live. Other sources are plainly labeled as funder-page reviews, and
-NASE's paid-membership eligibility requirement is shown before the user follows the application link.
+paid membership or application-fee requirements are shown before the user follows the application link.
+
+`20260913010000_repair_search_and_loan_catalog.sql` hides the unverified prototype loan rows and
+replaces them with stable, verified program records. The amount filter uses range overlap: a desired
+minimum is compared with each program maximum, and a desired maximum is compared with each program
+minimum. A small read-only official-link fallback keeps the directory useful if a deployment cannot
+apply the database migration yet; migrated database records automatically take precedence. Rates and
+approval are intentionally not estimated because participating lenders set them.
 
 ---
 

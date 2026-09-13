@@ -13,9 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { evaluateEligibility } from "@/lib/eligibility";
-import { FEDERAL_GRANT_AGENCIES, FEDERAL_GRANT_CATEGORIES, FEDERAL_GRANT_PAGE_SIZE, searchFederalGrants, type FederalGrantSearchParams } from "@/lib/grants-gov";
+import { isArizonaOpportunity, matchesCuratedApplicantFilter, matchesFundingCategory } from "@/lib/grant-taxonomy";
+import { FEDERAL_GRANT_CATEGORIES, FEDERAL_GRANT_PAGE_SIZE, fetchFederalGrantDetails, searchFederalGrants, type FederalGrantSearchParams } from "@/lib/grants-gov";
 import { isProgramAvailable } from "@/lib/program-availability";
-import { curatedProgramToOpportunity, federalHitToOpportunity, opportunityKey, serializeOpportunity, type Opportunity } from "@/lib/opportunities";
+import { curatedProgramToOpportunity, federalDetailToOpportunity, federalHitToOpportunity, opportunityKey, serializeOpportunity, type Opportunity } from "@/lib/opportunities";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@supabase/supabase-js";
 import { AlertCircle, BellRing, Database, ExternalLink, RotateCcw, Search, ShieldCheck } from "lucide-react";
@@ -23,7 +24,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-type SourceFilter = "all" | "federal" | "reviewed";
+type SourceFilter = "all" | "federal" | "arizona" | "other";
 type SortMode = "match" | "deadline" | "newest";
 const QUICK_SEARCHES = ["technology", "rural business", "export", "women-owned"];
 
@@ -44,7 +45,7 @@ export default function Grants() {
   const [emailAlert, setEmailAlert] = useState(false);
   const [federalFilters, setFederalFilters] = useState({
     status: "posted" as FederalGrantSearchParams["status"],
-    eligibility: "23|99" as NonNullable<FederalGrantSearchParams["eligibility"]> | "all",
+    eligibility: "22|23|99" as string | "all",
     category: "",
     agency: "",
   });
@@ -83,7 +84,7 @@ export default function Grants() {
   const federalQuery = useQuery({
     queryKey: ["unified-grants-gov", federalParams],
     queryFn: ({ signal }) => searchFederalGrants(federalParams, signal),
-    enabled: sourceFilter !== "reviewed",
+    enabled: sourceFilter === "all" || sourceFilter === "federal",
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -107,22 +108,65 @@ export default function Grants() {
     staleTime: 30 * 60 * 1000,
   });
 
+  const facetParams = useMemo<FederalGrantSearchParams>(() => ({
+    status: federalFilters.status,
+    eligibility: federalFilters.eligibility === "all" ? undefined : federalFilters.eligibility,
+    instrument: "G",
+    page: 0,
+    rows: 1,
+  }), [federalFilters.eligibility, federalFilters.status]);
+  const facetsQuery = useQuery({
+    queryKey: ["grants-gov-filter-options", facetParams],
+    queryFn: ({ signal }) => searchFederalGrants(facetParams, signal),
+    enabled: sourceFilter === "all" || sourceFilter === "federal",
+    staleTime: 15 * 60 * 1000,
+    retry: 1,
+  });
+  const federalIds = useMemo(
+    () => (federalQuery.data?.opportunities || []).map((item) => item.id),
+    [federalQuery.data?.opportunities],
+  );
+  const federalDetailsQuery = useQuery({
+    queryKey: ["grants-gov-detail-enrichment", federalIds],
+    queryFn: ({ signal }) => fetchFederalGrantDetails(federalIds, signal),
+    enabled: Boolean(profile && federalIds.length > 0),
+    staleTime: 30 * 60 * 1000,
+    retry: 0,
+  });
+  const categoryOptions = (sourceFilter === "all" || sourceFilter === "federal") && facetsQuery.data?.fundingCategories.length
+    ? facetsQuery.data.fundingCategories
+    : FEDERAL_GRANT_CATEGORIES.map((item) => ({ ...item, count: 0 }));
+  const agencyOptions = facetsQuery.data?.agencies || [];
+
   const opportunities = useMemo(() => {
     const query = submittedSearch.trim().toLowerCase();
+    const detailById = new Map((federalDetailsQuery.data || []).map((detail) => [String(detail.id), detail]));
     const curated = sourceFilter === "federal" || page > 0 ? [] : (curatedQuery.data || [])
       .filter((program) => isProgramAvailable(program))
       .map(curatedProgramToOpportunity)
-      .filter((item) => !query || [item.title, item.sponsor, item.description, ...item.industryTags].join(" ").toLowerCase().includes(query));
-    const federal = sourceFilter === "reviewed" ? [] : (federalQuery.data?.opportunities || []).map(federalHitToOpportunity);
+      .filter((item) => sourceFilter === "all"
+        || (sourceFilter === "arizona" ? isArizonaOpportunity(item) : !isArizonaOpportunity(item)))
+      .filter((item) => !federalFilters.agency)
+      .filter((item) => matchesCuratedApplicantFilter(
+        item,
+        federalFilters.eligibility === "all" ? undefined : federalFilters.eligibility,
+      ))
+      .filter((item) => matchesFundingCategory(item, federalFilters.category))
+      .filter((item) => !query || [item.title, item.sponsor, item.description, item.eligibilityNotes, ...item.industryTags].join(" ").toLowerCase().includes(query));
+    const federal = sourceFilter === "arizona" || sourceFilter === "other" ? [] : (federalQuery.data?.opportunities || []).map((hit) => {
+      const detail = detailById.get(hit.id);
+      return detail ? federalDetailToOpportunity(detail) : federalHitToOpportunity(hit);
+    });
     return [...curated, ...federal].sort((left, right) => {
       if (sortMode === "match") return evaluateEligibility(profile, right).score - evaluateEligibility(profile, left).score;
       const leftDate = left.deadline ? new Date(left.deadline).getTime() : Number.MAX_SAFE_INTEGER;
       const rightDate = right.deadline ? new Date(right.deadline).getTime() : Number.MAX_SAFE_INTEGER;
       return sortMode === "deadline" ? leftDate - rightDate : rightDate - leftDate;
     });
-  }, [curatedQuery.data, federalQuery.data, page, profile, sortMode, sourceFilter, submittedSearch]);
+  }, [curatedQuery.data, federalDetailsQuery.data, federalFilters.agency, federalFilters.category, federalFilters.eligibility, federalQuery.data, page, profile, sortMode, sourceFilter, submittedSearch]);
 
-  const loading = (sourceFilter !== "reviewed" && federalQuery.isLoading) || (sourceFilter !== "federal" && curatedQuery.isLoading);
+  const loading = ((sourceFilter === "all" || sourceFilter === "federal") && federalQuery.isLoading)
+    || (sourceFilter !== "federal" && curatedQuery.isLoading);
   const federalTotalPages = Math.max(1, Math.ceil((federalQuery.data?.hitCount || 0) / FEDERAL_GRANT_PAGE_SIZE));
 
   const submitSearch = (event: FormEvent) => {
@@ -132,7 +176,7 @@ export default function Grants() {
   };
   const resetSearch = () => {
     setSearchDraft(""); setSubmittedSearch(""); setSourceFilter("all"); setPage(0);
-    setFederalFilters({ status: "posted", eligibility: "23|99", category: "", agency: "" });
+    setFederalFilters({ status: "posted", eligibility: "22|23|99", category: "", agency: "" });
     setUrlParams({});
   };
 
@@ -175,7 +219,7 @@ export default function Grants() {
   return (
     <DashboardLayout>
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-7 max-w-4xl"><Badge className="mb-3">Arizona-first · official-source search</Badge><h1 className="text-4xl font-bold">Find grants your business can actually pursue</h1><p className="mt-3 text-lg text-muted-foreground">One search combines live federal opportunities with reviewed funder records, including Arizona programs, then explains the evidence behind each match.</p></header>
+        <header className="mb-7 max-w-4xl"><Badge className="mb-3">Arizona-first · official-source search</Badge><h1 className="text-4xl font-bold">Find grants your business can actually pursue</h1><p className="mt-3 text-lg text-muted-foreground">One search combines the live Grants.gov API, Arizona programs checked against official pages, and clearly labeled direct-funder programs. Profile scores use the full eligibility record when it is available.</p></header>
         <Tabs defaultValue="search" className="space-y-6">
           <TabsList><TabsTrigger value="search">Unified search</TabsTrigger><TabsTrigger value="sources">Coverage & sources</TabsTrigger></TabsList>
           <TabsContent value="search" className="space-y-6">
@@ -183,27 +227,29 @@ export default function Grants() {
               <div className="flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" /><Input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} className="pl-10" placeholder="Describe your business, project, or funding need" /></div><Button type="submit" className="sm:w-28">Search</Button><Button type="button" variant="outline" onClick={saveCurrentSearch}><BellRing className="mr-2 h-4 w-4" />Save search</Button></div>
               <div className="flex flex-wrap gap-2">{QUICK_SEARCHES.map((query) => <Button key={query} type="button" size="sm" variant="secondary" onClick={() => { setSearchDraft(query); setSubmittedSearch(query); setPage(0); setUrlParams({ search: query }); }}>{query}</Button>)}</div>
               <div className="grid gap-4 border-t pt-5 md:grid-cols-2 lg:grid-cols-5">
-                <div className="space-y-2"><Label>Sources</Label><Select value={sourceFilter} onValueChange={(value) => { setSourceFilter(value as SourceFilter); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Federal + reviewed</SelectItem><SelectItem value="federal">Live federal only</SelectItem><SelectItem value="reviewed">Reviewed sources only</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label>Applicant</Label><Select value={federalFilters.eligibility} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, eligibility: value as typeof federalFilters.eligibility })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="23|99">Small business + unrestricted</SelectItem><SelectItem value="23">Small businesses</SelectItem><SelectItem value="22">Other for-profit</SelectItem><SelectItem value="99">Unrestricted</SelectItem><SelectItem value="all">All applicants</SelectItem></SelectContent></Select></div>
-                <div className="space-y-2"><Label>Category</Label><Select value={federalFilters.category || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, category: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{FEDERAL_GRANT_CATEGORIES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Agency</Label><Select value={federalFilters.agency || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, agency: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All agencies</SelectItem>{FEDERAL_GRANT_AGENCIES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>Sort</Label><Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="match">Best profile match</SelectItem><SelectItem value="deadline">Deadline soonest</SelectItem><SelectItem value="newest">Newest deadline</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Source region</Label><Select value={sourceFilter} onValueChange={(value) => { const next = value as SourceFilter; setSourceFilter(next); setFederalFilters((current) => ({ ...current, agency: next === "arizona" || next === "other" ? "" : current.agency })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All sources</SelectItem><SelectItem value="federal">Federal · live Grants.gov</SelectItem><SelectItem value="arizona">Arizona · official programs</SelectItem><SelectItem value="other">Other direct funders</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Applicant type</Label><Select value={federalFilters.eligibility} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, eligibility: value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="22|23|99">Businesses · broad</SelectItem><SelectItem value="23">Small businesses</SelectItem><SelectItem value="22">Other for-profit businesses</SelectItem><SelectItem value="99">Unrestricted applicants</SelectItem><SelectItem value="all">All applicant types</SelectItem></SelectContent></Select></div>
+                <div className="space-y-2"><Label>Funding category</Label><Select value={federalFilters.category || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, category: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categoryOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}{item.count > 0 ? ` (${item.count})` : ""}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Federal agency</Label><Select disabled={sourceFilter === "arizona" || sourceFilter === "other" || (facetsQuery.isSuccess && agencyOptions.length === 0)} value={federalFilters.agency || "all"} onValueChange={(value) => { setFederalFilters((current) => ({ ...current, agency: value === "all" ? "" : value })); setPage(0); }}><SelectTrigger><SelectValue placeholder={facetsQuery.isLoading ? "Loading active agencies…" : "All active agencies"} /></SelectTrigger><SelectContent><SelectItem value="all">All active agencies</SelectItem>{agencyOptions.map((item) => <SelectItem key={item.value} value={item.value}>{item.label} ({item.count})</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>Sort</Label><Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="match">Best profile match</SelectItem><SelectItem value="deadline">Deadline soonest</SelectItem><SelectItem value="newest">Latest deadline</SelectItem></SelectContent></Select></div>
               </div>
+              {federalFilters.category && (sourceFilter === "all" || sourceFilter === "federal") && <p className="text-xs text-muted-foreground">Federal categories are official Grants.gov classifications. A title may not contain the category word; open the full record to see the categorized activity and scope.</p>}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm"><label className="flex items-center gap-2 text-muted-foreground"><Checkbox checked={emailAlert} onCheckedChange={(checked) => setEmailAlert(checked === true)} />Email me when this saved search finds something new</label><Button type="button" variant="ghost" size="sm" onClick={resetSearch}><RotateCcw className="mr-2 h-4 w-4" />Reset</Button></div>
             </form></CardContent></Card>
 
             {!profile && <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>Your results are not personalized yet</AlertTitle><AlertDescription className="flex flex-wrap items-center justify-between gap-3"><span>Complete a business profile to see explainable fit scores and likely eligibility conflicts.</span><Button size="sm" onClick={() => navigate(user ? "/onboarding" : "/auth")}>Build my match profile</Button></AlertDescription></Alert>}
-            {federalQuery.isError && sourceFilter !== "reviewed" && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Federal search is temporarily unavailable</AlertTitle><AlertDescription>Reviewed funder-source results are still shown. You can also search directly on <a className="underline" href="https://www.grants.gov/search-grants" target="_blank" rel="noreferrer">Grants.gov</a>.</AlertDescription></Alert>}
+            {federalQuery.isError && (sourceFilter === "all" || sourceFilter === "federal") && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Federal search is temporarily unavailable</AlertTitle><AlertDescription>Arizona and direct-funder results are still shown when available. You can also search directly on <a className="underline" href="https://www.grants.gov/search-grants" target="_blank" rel="noreferrer">Grants.gov</a>.</AlertDescription></Alert>}
+            {profile && federalDetailsQuery.isFetching && <Alert><ShieldCheck className="h-4 w-4" /><AlertTitle>Refining your profile matches</AlertTitle><AlertDescription>Blueprints is loading official applicant types, categories, award ranges, and eligibility notes for this federal result page.</AlertDescription></Alert>}
 
-            <section aria-live="polite" aria-busy={loading}><div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold">Funding opportunities</h2><p className="text-sm text-muted-foreground">{opportunities.length} shown{federalQuery.data ? ` · ${federalQuery.data.hitCount.toLocaleString()} federal matches available` : ""}</p></div>{profile && <p className="text-sm text-muted-foreground"><ShieldCheck className="mr-1 inline h-4 w-4" />Scores explain fit; always confirm final eligibility with the funder.</p>}</div>
+            <section aria-live="polite" aria-busy={loading}><div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-2xl font-semibold">Funding opportunities</h2><p className="text-sm text-muted-foreground">{opportunities.length} shown{(sourceFilter === "all" || sourceFilter === "federal") && federalQuery.data ? ` · ${federalQuery.data.hitCount.toLocaleString()} federal matches available` : ""}</p></div>{profile && <p className="text-sm text-muted-foreground"><ShieldCheck className="mr-1 inline h-4 w-4" />Scores explain fit; always confirm final eligibility with the funder.</p>}</div>
               {loading ? <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-96 rounded-xl" />)}</div> : opportunities.length === 0 ? <div className="rounded-xl border border-dashed p-12 text-center"><h3 className="text-xl font-semibold">No opportunities match</h3><p className="mt-2 text-muted-foreground">Try a broader phrase or reset the source filters.</p><Button className="mt-5" variant="outline" onClick={resetSearch}>Reset search</Button></div> : <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">{opportunities.map((opportunity) => <OpportunityCard key={opportunity.key} opportunity={opportunity} eligibility={evaluateEligibility(profile, opportunity)} saved={savedKeys.has(opportunity.key)} saving={savingKey === opportunity.key} onSaveToggle={toggleSaved} />)}</div>}
-              {sourceFilter !== "reviewed" && federalQuery.data && federalQuery.data.hitCount > FEDERAL_GRANT_PAGE_SIZE && <nav className="mt-8 flex items-center justify-center gap-3" aria-label="Federal result pages"><Button variant="outline" disabled={page === 0 || federalQuery.isFetching} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</Button><span className="text-sm text-muted-foreground">Federal page {page + 1} of {federalTotalPages}</span><Button variant="outline" disabled={page + 1 >= federalTotalPages || federalQuery.isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button></nav>}
+              {(sourceFilter === "all" || sourceFilter === "federal") && federalQuery.data && federalQuery.data.hitCount > FEDERAL_GRANT_PAGE_SIZE && <nav className="mt-8 flex items-center justify-center gap-3" aria-label="Federal result pages"><Button variant="outline" disabled={page === 0 || federalQuery.isFetching} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</Button><span className="text-sm text-muted-foreground">Federal page {page + 1} of {federalTotalPages}</span><Button variant="outline" disabled={page + 1 >= federalTotalPages || federalQuery.isFetching} onClick={() => setPage((current) => current + 1)}>Next</Button></nav>}
             </section>
           </TabsContent>
 
-          <TabsContent value="sources" className="space-y-5"><div><h2 className="text-2xl font-semibold">Coverage registry</h2><p className="mt-1 text-muted-foreground">A transparent list of what Blueprints searches live and what it reviews from official Arizona pages. “Reviewed” does not mean automated.</p></div>
-            {sourcesQuery.isError ? <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>Source registry requires the latest database migration</AlertTitle><AlertDescription>Apply the 20260908010000 migration to publish the coverage registry.</AlertDescription></Alert> : <div className="grid gap-4 md:grid-cols-2">{(sourcesQuery.data || []).map((source) => <Card key={source.id}><CardHeader><div className="flex items-start justify-between gap-3"><CardTitle className="text-lg">{source.name}</CardTitle><Badge variant={source.automated ? "default" : "secondary"}>{source.automated ? "Live API" : "Official-page review"}</Badge></div></CardHeader><CardContent className="space-y-3 text-sm"><p>{source.coverage}</p><p className="text-muted-foreground">{source.notes}</p><div className="flex items-center justify-between text-xs text-muted-foreground"><span>{source.update_frequency}</span>{source.last_checked_at && <span>Checked {new Date(source.last_checked_at).toLocaleDateString()}</span>}</div><Button asChild size="sm" variant="outline"><a href={source.homepage_url} target="_blank" rel="noreferrer">Open source <ExternalLink className="ml-2 h-4 w-4" /></a></Button></CardContent></Card>)}</div>}
-            <Alert><Database className="h-4 w-4" /><AlertTitle>Current automation boundary</AlertTitle><AlertDescription>Grants.gov is queried live. Other agency and funder pages are reviewed and normalized into the database; they are not represented as live APIs. The shared opportunity model lets future adapters reuse the same result cards, eligibility checks, saves, and pipeline.</AlertDescription></Alert>
+          <TabsContent value="sources" className="space-y-5"><div><h2 className="text-2xl font-semibold">Coverage registry</h2><p className="mt-1 text-muted-foreground">“Source” means the official system or funder page where an opportunity originates. Blueprints labels each source by region and collection method so a manual page check is never confused with a live API.</p></div>
+            {sourcesQuery.isError ? <Alert><AlertCircle className="h-4 w-4" /><AlertTitle>Source registry requires the latest database migrations</AlertTitle><AlertDescription>Apply the pending Supabase migrations to publish the coverage registry and newest providers.</AlertDescription></Alert> : <div className="grid gap-4 md:grid-cols-2">{(sourcesQuery.data || []).map((source) => <Card key={source.id}><CardHeader><div className="flex items-start justify-between gap-3"><CardTitle className="text-lg">{source.name}</CardTitle><div className="flex flex-wrap justify-end gap-2"><Badge variant={source.automated ? "default" : "secondary"}>{source.automated ? "Live API" : "Official-page review"}</Badge>{source.status !== "active" && <Badge variant="outline">Temporarily unavailable</Badge>}</div></div></CardHeader><CardContent className="space-y-3 text-sm"><p>{source.coverage}</p><p className="text-muted-foreground">{source.notes}</p><div className="flex items-center justify-between text-xs text-muted-foreground"><span>{source.update_frequency}</span>{source.last_checked_at && <span>Checked {new Date(source.last_checked_at).toLocaleDateString()}</span>}</div><Button asChild size="sm" variant="outline"><a href={source.homepage_url} target="_blank" rel="noreferrer">Open source <ExternalLink className="ml-2 h-4 w-4" /></a></Button></CardContent></Card>)}</div>}
+            <Alert><Database className="h-4 w-4" /><AlertTitle>How coverage works</AlertTitle><AlertDescription>Grants.gov is queried live. Arizona and direct-funder pages without a reliable public API are checked against their official pages and stored with a verification date. “Official-page review” describes the collection method—not a lower-quality or unreviewed result.</AlertDescription></Alert>
           </TabsContent>
         </Tabs>
       </main>

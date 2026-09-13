@@ -19,10 +19,32 @@ test("migration creates source-aware saves, searches, and reminders", async () =
 test("grant finder is unified and labels automation boundaries", async () => {
   const grants = await read("../src/pages/Grants.tsx");
   assert.match(grants, /Unified search/);
-  assert.match(grants, /Federal \+ reviewed/);
-  assert.match(grants, /Current automation boundary/);
+  assert.match(grants, /Federal · live Grants\.gov/);
+  assert.match(grants, /Arizona · official programs/);
+  assert.match(grants, /How coverage works/);
+  assert.match(grants, /fetchFederalGrantDetails/);
+  assert.match(grants, /matchesFundingCategory/);
   assert.match(grants, /saved_opportunities/);
   assert.doesNotMatch(grants, /TabsTrigger value="federal"/);
+});
+
+test("loan catalog hides legacy claims and uses verified official URLs", async () => {
+  const [migration, loans, fallback] = await Promise.all([
+    read("../supabase/migrations/20260913010000_repair_search_and_loan_catalog.sql"),
+    read("../src/pages/Loans.tsx"),
+    read("../src/data/verified-loans.ts"),
+  ]);
+  assert.match(migration, /WHERE type = 'LOAN'/);
+  assert.match(migration, /Unverified legacy loan seed/);
+  assert.match(migration, /https:\/\/www\.sba\.gov\/loans\/7a-loans\//);
+  assert.match(migration, /https:\/\/oeo\.az\.gov\/microbiz/);
+  assert.match(migration, /womensnet:amber-grants-2026/);
+  assert.doesNotMatch(migration, /example\.com/);
+  assert.match(loans, /VERIFIED_LOAN_FALLBACK/);
+  assert.match(loans, /program\.max_amount >= desiredMinimum/);
+  assert.match(fallback, /catalog:sba-7a/);
+  assert.match(fallback, /https:\/\/www\.sba\.gov\/loans\/microloans\//);
+  assert.doesNotMatch(fallback, /example\.com/);
 });
 
 test("homepage no longer simulates subscriptions or daily verification", async () => {

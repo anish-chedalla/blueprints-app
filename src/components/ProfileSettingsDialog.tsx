@@ -8,10 +8,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Building2, MapPin, Users, Briefcase } from "lucide-react";
+import { PROFILE_BUSINESS_TYPES, PROFILE_DEMOGRAPHICS, PROFILE_INDUSTRIES } from "@/lib/profile-options";
 
-const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "manufacturing", "healthcare"];
-const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned", "tribal", "rural"];
-const BUSINESS_TYPES = ["LLC", "Sole Proprietor", "Corporation", "Partnership", "Nonprofit"];
 const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
 
 interface ProfileSettingsDialogProps {
@@ -134,7 +132,7 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
                   <SelectValue placeholder="Select business type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BUSINESS_TYPES.map((type) => (
+                  {PROFILE_BUSINESS_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -184,16 +182,16 @@ export function ProfileSettingsDialog({ open, onOpenChange }: ProfileSettingsDia
                 Industries
               </Label>
               <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map(tag => (
-                  <Badge key={tag} variant={formData.industryTags.includes(tag) ? "default" : "outline"} className="cursor-pointer capitalize" onClick={() => toggleTag(tag, "industryTags")}>{tag}</Badge>
+                {PROFILE_INDUSTRIES.map(({ value, label }) => (
+                  <Badge key={value} variant={formData.industryTags.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "industryTags")}>{label}</Badge>
                 ))}
               </div>
             </div>
             <div>
               <Label className="mb-3 block">Business Demographics</Label>
               <div className="flex flex-wrap gap-2">
-                {DEMOGRAPHICS.map(tag => (
-                  <Badge key={tag} variant={formData.demographics.includes(tag) ? "default" : "outline"} className="cursor-pointer capitalize" onClick={() => toggleTag(tag, "demographics")}>{tag.replace(/_/g, "-")}</Badge>
+                {PROFILE_DEMOGRAPHICS.map(({ value, label }) => (
+                  <Badge key={value} variant={formData.demographics.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "demographics")}>{label}</Badge>
                 ))}
               </div>
             </div>

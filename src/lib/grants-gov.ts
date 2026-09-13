@@ -7,37 +7,41 @@ export const FEDERAL_GRANT_CATEGORIES = [
   { value: "AR", label: "Arts" },
   { value: "BC", label: "Business & commerce" },
   { value: "CD", label: "Community development" },
+  { value: "CP", label: "Consumer protection" },
   { value: "ED", label: "Education" },
   { value: "ELT", label: "Employment & training" },
   { value: "EN", label: "Energy" },
   { value: "ENV", label: "Environment" },
+  { value: "FN", label: "Food & nutrition" },
   { value: "HL", label: "Health" },
   { value: "HO", label: "Housing" },
+  { value: "ISS", label: "Income security & social services" },
+  { value: "LJL", label: "Law, justice & legal services" },
   { value: "NR", label: "Natural resources" },
   { value: "RD", label: "Regional development" },
   { value: "ST", label: "Science & technology" },
   { value: "T", label: "Transportation" },
 ] as const;
 
-export const FEDERAL_GRANT_AGENCIES = [
-  { value: "SBA", label: "Small Business Administration" },
-  { value: "USDA", label: "Department of Agriculture" },
-  { value: "DOC", label: "Department of Commerce" },
-  { value: "DOE", label: "Department of Energy" },
-  { value: "HHS", label: "Health & Human Services" },
-  { value: "DOI", label: "Department of the Interior" },
-  { value: "NSF", label: "National Science Foundation" },
-] as const;
-
 export interface FederalGrantSearchParams {
   keyword?: string;
   status: "posted" | "forecasted" | "posted|forecasted";
-  eligibility?: "23" | "23|99" | "22" | "99";
+  eligibility?: string;
   category?: string;
   agency?: string;
   instrument?: "G" | "CA" | "G|CA";
   page?: number;
   rows?: number;
+}
+
+export interface FederalGrantFacetOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+export interface FederalGrantAgencyOption extends FederalGrantFacetOption {
+  subAgencies: FederalGrantFacetOption[];
 }
 
 export interface FederalGrantSearchHit {
@@ -58,6 +62,9 @@ export interface FederalGrantSearchResult {
   startRecord: number;
   opportunities: FederalGrantSearchHit[];
   suggestion: string;
+  eligibilities: FederalGrantFacetOption[];
+  fundingCategories: FederalGrantFacetOption[];
+  agencies: FederalGrantAgencyOption[];
 }
 
 export interface FederalGrantDetail {
@@ -119,6 +126,9 @@ interface RawSearchData {
   startRecord?: number;
   oppHits?: RawSearchHit[];
   suggestion?: string;
+  eligibilities?: unknown;
+  fundingCategories?: unknown;
+  agencies?: unknown;
 }
 
 type UnknownRecord = Record<string, unknown>;
@@ -226,6 +236,9 @@ export async function searchFederalGrants(
     hitCount: Number(data.hitCount) || 0,
     startRecord: Number(data.startRecord) || 0,
     suggestion: htmlToPlainText(data.suggestion),
+    eligibilities: parseFacetOptions(data.eligibilities),
+    fundingCategories: parseFacetOptions(data.fundingCategories),
+    agencies: parseAgencyOptions(data.agencies),
     opportunities: (data.oppHits ?? []).map((hit) => ({
       id: String(hit.id ?? ""),
       number: htmlToPlainText(hit.number),
@@ -251,6 +264,32 @@ function asRecord(value: unknown): UnknownRecord {
 
 function asRecordArray(value: unknown): UnknownRecord[] {
   return Array.isArray(value) ? value.map(asRecord) : [];
+}
+
+function parseFacetOption(value: unknown): FederalGrantFacetOption | null {
+  const item = asRecord(value);
+  const optionValue = firstText(item.value, item.id, item.code, item.agencyCode);
+  const label = firstText(item.label, item.description, item.name, item.agencyName);
+  if (!optionValue || !label) return null;
+  const rawCount = item.count ?? item.hitCount ?? 0;
+  const count = typeof rawCount === "number" ? rawCount : Number(rawCount);
+  return { value: optionValue, label, count: Number.isFinite(count) ? count : 0 };
+}
+
+function parseFacetOptions(value: unknown): FederalGrantFacetOption[] {
+  return (Array.isArray(value) ? value : [])
+    .map(parseFacetOption)
+    .filter((item): item is FederalGrantFacetOption => item !== null);
+}
+
+function parseAgencyOptions(value: unknown): FederalGrantAgencyOption[] {
+  return (Array.isArray(value) ? value : []).flatMap((rawItem) => {
+    const item = asRecord(rawItem);
+    const option = parseFacetOption(item);
+    if (!option) return [];
+    const children = item.children ?? item.subAgencies ?? item.subAgencyOptions ?? item.options;
+    return [{ ...option, subAgencies: parseFacetOptions(children) }];
+  });
 }
 
 function firstText(...values: unknown[]): string {
@@ -353,4 +392,31 @@ export async function fetchFederalGrantDetail(
     officialUrl: grantsGovOpportunityUrl(numericId),
     additionalUrl: safeExternalUrl(details.fundingDescLinkUrl),
   };
+}
+
+export async function fetchFederalGrantDetails(
+  opportunityIds: Array<string | number>,
+  signal?: AbortSignal,
+  concurrency = 4,
+): Promise<FederalGrantDetail[]> {
+  const ids = [...new Set(opportunityIds.map(String).filter(Boolean))];
+  const details: FederalGrantDetail[] = [];
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), ids.length);
+
+  const worker = async () => {
+    while (nextIndex < ids.length && !signal?.aborted) {
+      const id = ids[nextIndex++];
+      try {
+        details.push(await fetchFederalGrantDetail(id, signal));
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        // One malformed or temporarily unavailable detail record should not stop
+        // the rest of the result page from being enriched.
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: workerCount }, worker));
+  return details;
 }

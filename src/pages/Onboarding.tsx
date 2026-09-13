@@ -10,10 +10,8 @@ import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, MapPin, Users, Briefcase, Award } from "lucide-react";
 import type { TablesInsert } from "@/integrations/supabase/types";
+import { PROFILE_BUSINESS_TYPES, PROFILE_DEMOGRAPHICS, PROFILE_INDUSTRIES } from "@/lib/profile-options";
 
-const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "manufacturing", "healthcare"];
-const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned", "tribal", "rural"];
-const BUSINESS_TYPES = ["LLC", "Sole Proprietor", "Corporation", "Partnership", "Nonprofit"];
 const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
 
 export default function Onboarding() {
@@ -131,7 +129,7 @@ export default function Onboarding() {
                   <SelectValue placeholder="Select business type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BUSINESS_TYPES.map((type) => (
+                  {PROFILE_BUSINESS_TYPES.map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -191,8 +189,8 @@ export default function Onboarding() {
                 Industries (select all that apply)
               </Label>
               <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map(tag => (
-                  <Badge key={tag} variant={formData.industryTags.includes(tag) ? "default" : "outline"} className="cursor-pointer capitalize" onClick={() => toggleTag(tag, "industryTags")}>{tag}</Badge>
+                {PROFILE_INDUSTRIES.map(({ value, label }) => (
+                  <Badge key={value} variant={formData.industryTags.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "industryTags")}>{label}</Badge>
                 ))}
               </div>
             </div>
@@ -202,8 +200,8 @@ export default function Onboarding() {
                 Business Demographics (optional)
               </Label>
               <div className="flex flex-wrap gap-2">
-                {DEMOGRAPHICS.map(tag => (
-                  <Badge key={tag} variant={formData.demographics.includes(tag) ? "default" : "outline"} className="cursor-pointer capitalize" onClick={() => toggleTag(tag, "demographics")}>{tag.replace(/_/g, "-")}</Badge>
+                {PROFILE_DEMOGRAPHICS.map(({ value, label }) => (
+                  <Badge key={value} variant={formData.demographics.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "demographics")}>{label}</Badge>
                 ))}
               </div>
             </div>

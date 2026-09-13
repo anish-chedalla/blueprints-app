@@ -52,3 +52,14 @@ test("membership-gated funding stays possible until membership is confirmed", ()
   assert.equal(result.verdict, "possible");
   assert.ok(result.missing.some((reason) => reason.includes("membership")));
 });
+
+test("semantic industry matching recognizes federal category language", () => {
+  const result = evaluateEligibility(profile, {
+    ...opportunity,
+    level: "NATIONAL",
+    eligibleStates: [],
+    industryTags: ["Science and Technology and other Research and Development"],
+    description: "Supports scientific research and engineering innovation.",
+  });
+  assert.ok(result.reasons.some((reason) => reason.includes("Technology & R&D")));
+});

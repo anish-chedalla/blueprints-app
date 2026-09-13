@@ -23,6 +23,14 @@ test("searchFederalGrants reads the nested API response and sends a browser-simp
         hitCount: 415,
         startRecord: 20,
         suggestion: "",
+        eligibilities: [{ label: "Small businesses", value: "23", count: 300 }],
+        fundingCategories: [{ label: "Environment", value: "ENV", count: 43 }],
+        agencies: [{
+          label: "Department of Commerce",
+          value: "DOC",
+          count: 3,
+          subAgencyOptions: [{ label: "NOAA", value: "DOC-NOAA", count: 3 }],
+        }],
         oppHits: [{
           id: "357305",
           number: "PAR-25-274",
@@ -64,6 +72,14 @@ test("searchFederalGrants reads the nested API response and sends a browser-simp
   assert.equal(result.opportunities[0].title, "Research & development – pilot");
   assert.equal(result.opportunities[0].closeDate, "2026-11-17");
   assert.deepEqual(result.opportunities[0].alnNumbers, ["93.213"]);
+  assert.deepEqual(result.eligibilities, [{ label: "Small businesses", value: "23", count: 300 }]);
+  assert.deepEqual(result.fundingCategories, [{ label: "Environment", value: "ENV", count: 43 }]);
+  assert.deepEqual(result.agencies, [{
+    label: "Department of Commerce",
+    value: "DOC",
+    count: 3,
+    subAgencies: [{ label: "NOAA", value: "DOC-NOAA", count: 3 }],
+  }]);
 });
 
 test("fetchFederalGrantDetail normalizes important opportunity fields", async (t) => {

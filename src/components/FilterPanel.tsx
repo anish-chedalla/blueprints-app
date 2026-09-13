@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
+import { PROFILE_DEMOGRAPHICS, PROFILE_INDUSTRIES } from "@/lib/profile-options";
 
 export interface ProgramFilters {
   level: string[];
@@ -26,8 +27,6 @@ interface FilterPanelProps {
 }
 
 const LEVELS = ["LOCAL", "STATE", "NATIONAL"];
-const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "healthcare", "manufacturing"];
-const DEMOGRAPHICS = ["women_owned", "veteran_owned", "minority_owned", "lgbtq_owned"];
 const COUNTIES = ["Maricopa", "Pima", "Pinal", "Yavapai", "Coconino", "Mohave", "Yuma"];
 const CITIES = ["Phoenix", "Tucson", "Mesa", "Chandler", "Scottsdale", "Glendale", "Gilbert", "Tempe"];
 
@@ -137,14 +136,14 @@ export const FilterPanel = ({ filters, onFilterChange, type }: FilterPanelProps)
             <div className="space-y-3">
               <Label className="font-semibold">Industry</Label>
               <div className="flex flex-wrap gap-2">
-                {INDUSTRIES.map(industry => (
+                {PROFILE_INDUSTRIES.map(({ value, label }) => (
                   <Badge
-                    key={industry}
-                    variant={filters.industryTags.includes(industry) ? "default" : "outline"}
+                    key={value}
+                    variant={filters.industryTags.includes(value) ? "default" : "outline"}
                     className="cursor-pointer"
-                    onClick={() => handleIndustryToggle(industry)}
+                    onClick={() => handleIndustryToggle(value)}
                   >
-                    {industry}
+                    {label}
                   </Badge>
                 ))}
               </div>
@@ -154,15 +153,15 @@ export const FilterPanel = ({ filters, onFilterChange, type }: FilterPanelProps)
             <div className="space-y-3">
               <Label className="font-semibold">Demographics</Label>
               <div className="space-y-2">
-                {DEMOGRAPHICS.map(demo => (
-                  <div key={demo} className="flex items-center space-x-2">
+                {PROFILE_DEMOGRAPHICS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`demo-${demo}`}
-                      checked={filters.demographics.includes(demo)}
-                      onCheckedChange={() => handleDemographicToggle(demo)}
+                      id={`demo-${value}`}
+                      checked={filters.demographics.includes(value)}
+                      onCheckedChange={() => handleDemographicToggle(value)}
                     />
-                    <label htmlFor={`demo-${demo}`} className="text-sm cursor-pointer capitalize">
-                      {demo.replace(/_/g, " ")}
+                    <label htmlFor={`demo-${value}`} className="text-sm cursor-pointer">
+                      {label}
                     </label>
                   </div>
                 ))}
@@ -171,17 +170,19 @@ export const FilterPanel = ({ filters, onFilterChange, type }: FilterPanelProps)
 
             {/* Amount Range */}
             <div className="space-y-3">
-              <Label className="font-semibold">Amount Range</Label>
+              <div><Label className="font-semibold">Funding needed</Label><p className="mt-1 text-xs text-muted-foreground">Shows programs whose published range overlaps yours.</p></div>
               <div className="space-y-2">
                 <Input
                   type="number"
-                  placeholder="Min amount"
+                  min="0"
+                  placeholder="At least $"
                   value={filters.minAmount}
                   onChange={(e) => onFilterChange({ ...filters, minAmount: e.target.value })}
                 />
                 <Input
                   type="number"
-                  placeholder="Max amount"
+                  min="0"
+                  placeholder="No more than $"
                   value={filters.maxAmount}
                   onChange={(e) => onFilterChange({ ...filters, maxAmount: e.target.value })}
                 />

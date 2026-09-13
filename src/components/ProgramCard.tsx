@@ -15,19 +15,22 @@ interface ProgramCardProps {
     name: string;
     sponsor: string;
     description: string;
-    min_amount?: number;
-    max_amount?: number;
-    deadline?: string;
-    rolling: boolean;
+    min_amount?: number | null;
+    max_amount?: number | null;
+    deadline?: string | null;
+    rolling: boolean | null;
     status: string;
-    city?: string;
-    county?: string;
+    city?: string | null;
+    county?: string | null;
+    source_url?: string | null;
+    last_verified_at?: string | null;
   };
   isFavorite?: boolean;
   onFavoriteToggle?: () => void;
+  externalOnly?: boolean;
 }
 
-export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: ProgramCardProps) => {
+export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, externalOnly = false }: ProgramCardProps) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -68,7 +71,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: P
     }
   };
 
-  const formatAmount = (min?: number, max?: number) => {
+  const formatAmount = (min?: number | null, max?: number | null) => {
     if (!min && !max) return null;
     const format = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
     if (min && max) return `${format(min)} - ${format(max)}`;
@@ -87,8 +90,8 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: P
 
   return (
     <Card 
-      className="hover-lift transition-all duration-300 cursor-pointer group border-border/50 hover:border-primary/30"
-      onClick={() => navigate(`/program/${program.id}`)}
+      className={`hover-lift transition-all duration-300 group border-border/50 hover:border-primary/30 ${externalOnly ? "" : "cursor-pointer"}`}
+      onClick={externalOnly ? undefined : () => navigate(`/program/${program.id}`)}
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
@@ -108,7 +111,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: P
               by {program.sponsor}
             </CardDescription>
           </div>
-          <Button
+          {!externalOnly && <Button
             size="icon"
             variant="ghost"
             onClick={handleFavorite}
@@ -120,7 +123,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: P
                 isFavorite ? "fill-red-500 text-red-500 scale-110" : "text-muted-foreground hover:text-red-500"
               }`}
             />
-          </Button>
+          </Button>}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -154,12 +157,27 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle }: P
               <span>Deadline: {new Date(program.deadline).toLocaleDateString()}</span>
             </div>
           ) : null}
+
+          {program.last_verified_at && (
+            <p className="text-xs text-muted-foreground">
+              Official source checked {new Date(program.last_verified_at).toLocaleDateString()}
+            </p>
+          )}
         </div>
 
-        <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-          <span>View Details</span>
-          <ExternalLink className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
-        </Button>
+        {externalOnly ? (
+          <Button asChild variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+            <a href={program.source_url} target="_blank" rel="noopener noreferrer">
+              <span>Open official program</span>
+              <ExternalLink className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+            </a>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+            <span>View Details</span>
+            <ExternalLink className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,5 +1,7 @@
 import type { Tables } from "@/integrations/supabase/types";
 import type { Opportunity } from "@/lib/opportunities";
+import { matchingProfileIndustries } from "./grant-taxonomy.ts";
+import { PROFILE_INDUSTRIES } from "./profile-options.ts";
 
 export type EligibilityVerdict = "likely" | "possible" | "unlikely" | "profile-needed";
 
@@ -136,11 +138,13 @@ export function evaluateEligibility(profile: BusinessProfile | null, opportunity
   }
 
   if (opportunity.industryTags.length > 0 && (profile.industry_tags || []).length > 0) {
-    const profileIndustries = (profile.industry_tags || []).map(normalize);
-    const matches = opportunity.industryTags.filter((tag) => profileIndustries.includes(normalize(tag)));
+    const matches = matchingProfileIndustries(opportunity, profile.industry_tags || []);
     if (matches.length > 0) {
       result.score += 15;
-      result.reasons.push(`Industry overlap: ${matches.slice(0, 2).join(", ")}`);
+      const labels = matches.slice(0, 2).map((match) => (
+        PROFILE_INDUSTRIES.find(({ value }) => value === match)?.label ?? match
+      ));
+      result.reasons.push(`Industry overlap: ${labels.join(", ")}`);
     } else {
       result.cautions.push("No direct industry overlap was found; the official description may still allow your project");
     }
