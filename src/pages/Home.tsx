@@ -33,7 +33,6 @@ const Footer = () => (
         <div>
           <h3 className="font-semibold mb-4">Tools</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li><Link to="/assistant" className="hover:text-foreground">AI Assistant</Link></li>
             <li><Link to="/saved" className="hover:text-foreground">Saved Funding</Link></li>
             <li><Link to="/history" className="hover:text-foreground">History</Link></li>
             <li><Link to="/dashboard" className="hover:text-foreground">Dashboard</Link></li>

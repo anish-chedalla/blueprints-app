@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Radio, ShieldCheck, Coins } from "lucide-react";
+import { ArrowRight, Lightbulb, Radio, ShieldCheck, CheckCircle2, Coins } from "lucide-react";
 
 const trustPoints = [
   { icon: Radio, label: "Live Grants.gov data" },
-  { icon: Sparkles, label: "AI-assisted matching" },
+  { icon: CheckCircle2, label: "Transparent eligibility checks" },
   { icon: Coins, label: "Free, no paywall" },
 ];
 
@@ -47,8 +47,8 @@ export const Hero = () => {
           className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80 md:text-xl"
         >
           Live federal grants, reviewed Arizona programs, and vetted small-business
-          loans in one place — with transparent eligibility checks and an AI
-          assistant to help you figure out what fits.
+          loans in one place — with transparent eligibility checks so you know why
+          a program fits.
         </motion.p>
 
         <motion.div
@@ -73,9 +73,9 @@ export const Hero = () => {
             asChild
             className="h-14 border-primary-foreground/30 bg-transparent px-8 text-base text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground"
           >
-            <Link to="/assistant" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Ask the AI assistant
+            <Link to="/idea-lab" className="flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              Not sure where to start?
             </Link>
           </Button>
         </motion.div>

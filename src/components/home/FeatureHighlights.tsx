@@ -1,15 +1,8 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Sparkles, Lightbulb, BellRing, History, ArrowRight } from "lucide-react";
+import { Lightbulb, BellRing, History, ArrowRight } from "lucide-react";
 
 const features = [
-  {
-    icon: Sparkles,
-    title: "AI funding assistant",
-    description: "Ask questions in plain English and get guidance on eligibility, next steps, and strong-fit programs.",
-    href: "/assistant",
-    cta: "Ask the assistant",
-  },
   {
     icon: Lightbulb,
     title: "Idea Lab",
@@ -50,7 +43,7 @@ export const FeatureHighlights = () => {
           </p>
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-3">
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
