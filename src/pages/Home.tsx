@@ -1,14 +1,12 @@
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
-import { TrustRow } from "@/components/home/TrustRow";
+import { StatsStrip } from "@/components/home/StatsStrip";
 import { SmartSearch } from "@/components/home/SmartSearch";
 import { GrantTicker } from "@/components/home/GrantTicker";
 import { ProblemOutcome } from "@/components/home/ProblemOutcome";
 import { Steps } from "@/components/home/Steps";
-import { LocalCoverage } from "@/components/home/LocalCoverage";
-import { FilterGrid } from "@/components/home/FilterGrid";
-
-import { EmailCapture } from "@/components/home/EmailCapture";
+import { CoverageSection } from "@/components/home/CoverageSection";
+import { FeatureHighlights } from "@/components/home/FeatureHighlights";
 import { AssuranceRow } from "@/components/home/AssuranceRow";
 import { FinalCTA } from "@/components/home/FinalCTA";
 import { Link } from "react-router-dom";
@@ -20,20 +18,25 @@ const Footer = () => (
         <div>
           <h3 className="font-semibold mb-4">About</h3>
           <p className="text-sm text-muted-foreground">
-            Blueprints helps small businesses find funding opportunities.
+            Blueprints helps Arizona small businesses find funding they can actually pursue —
+            live federal grants, reviewed local programs, and vetted loans in one place.
           </p>
         </div>
         <div>
-          <h3 className="font-semibold mb-4">Programs</h3>
+          <h3 className="font-semibold mb-4">Find funding</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li><Link to="/grants" className="hover:text-foreground">Grants</Link></li>
             <li><Link to="/loans" className="hover:text-foreground">Loans</Link></li>
+            <li><Link to="/idea-lab" className="hover:text-foreground">Idea Lab</Link></li>
           </ul>
         </div>
         <div>
           <h3 className="font-semibold mb-4">Tools</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
+            <li><Link to="/assistant" className="hover:text-foreground">AI Assistant</Link></li>
             <li><Link to="/saved" className="hover:text-foreground">Saved Funding</Link></li>
+            <li><Link to="/history" className="hover:text-foreground">History</Link></li>
+            <li><Link to="/dashboard" className="hover:text-foreground">Dashboard</Link></li>
           </ul>
         </div>
         <div>
@@ -57,14 +60,13 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <Hero />
-      <TrustRow />
+      <StatsStrip />
       <SmartSearch />
       <GrantTicker />
       <ProblemOutcome />
       <Steps />
-      <LocalCoverage />
-      <FilterGrid />
-      <EmailCapture />
+      <CoverageSection />
+      <FeatureHighlights />
       <AssuranceRow />
       <FinalCTA />
       <Footer />

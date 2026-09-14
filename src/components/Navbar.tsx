@@ -1,10 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
+import blueprintsIcon from "@/assets/blueprints-icon.png";
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,7 +45,11 @@ export const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 group">
-            <Building2 className="h-6 w-6 text-primary transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" />
+            <img
+              src={blueprintsIcon}
+              alt=""
+              className="h-8 w-8 rounded-md transition-transform duration-300 group-hover:scale-110"
+            />
             <span className="text-xl font-bold tracking-tight transition-colors duration-200 group-hover:text-primary">Blueprints</span>
           </Link>
 

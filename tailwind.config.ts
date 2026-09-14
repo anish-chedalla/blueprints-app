@@ -6,6 +6,17 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
+    fontFamily: {
+      sans: [
+        '"Plus Jakarta Sans"',
+        "ui-sans-serif",
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Roboto",
+        "sans-serif",
+      ],
+    },
     container: {
       center: true,
       padding: "2rem",

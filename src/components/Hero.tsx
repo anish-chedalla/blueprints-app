@@ -1,114 +1,97 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Sparkles, Radio, ShieldCheck, Coins } from "lucide-react";
+
+const trustPoints = [
+  { icon: Radio, label: "Live Grants.gov data" },
+  { icon: Sparkles, label: "AI-assisted matching" },
+  { icon: Coins, label: "Free, no paywall" },
+];
 
 export const Hero = () => {
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80">
-      {/* Animated map pins background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <radialGradient id="pinGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="hsl(var(--primary-foreground))" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="hsl(var(--primary-foreground))" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          
-          {/* Subtly scattered dots throughout */}
-          {[
-            { x: 15, y: 20, delay: 0 },
-            { x: 25, y: 15, delay: 0.1 },
-            { x: 35, y: 25, delay: 0.2 },
-            { x: 12, y: 35, delay: 0.15 },
-            { x: 22, y: 85, delay: 0.25 },
-            { x: 8, y: 70, delay: 0.3 },
-            { x: 45, y: 10, delay: 0.35 },
-            { x: 55, y: 18, delay: 0.4 },
-            { x: 48, y: 88, delay: 0.45 },
-            { x: 65, y: 12, delay: 0.5 },
-            { x: 75, y: 22, delay: 0.55 },
-            { x: 70, y: 82, delay: 0.6 },
-            { x: 85, y: 15, delay: 0.65 },
-            { x: 92, y: 28, delay: 0.7 },
-            { x: 88, y: 75, delay: 0.75 },
-            { x: 18, y: 92, delay: 0.8 },
-            { x: 42, y: 78, delay: 0.85 },
-            { x: 62, y: 90, delay: 0.9 },
-          ].map((pin, i) => (
-            <motion.g
-              key={`dot-${i}`}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: pin.delay + 0.5 }}
-            >
-              <circle cx={`${pin.x}%`} cy={`${pin.y}%`} r="12" fill="url(#pinGlow)" />
-              <circle cx={`${pin.x}%`} cy={`${pin.y}%`} r="2.5" fill="hsl(var(--primary-foreground))" opacity="0.4" />
-            </motion.g>
-          ))}
-        </svg>
-      </div>
+    <div className="relative overflow-hidden bg-gradient-to-b from-primary via-primary to-primary/90 pb-28 pt-24 md:pb-36 md:pt-32">
+      <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+      <div className="absolute -top-32 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-accent/20 blur-3xl" />
 
-      {/* Main content */}
-      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-4"
+          transition={{ duration: 0.5 }}
+          className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-1.5 backdrop-blur-sm"
         >
-          <span className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent drop-shadow-lg">
-            Blueprints
+          <ShieldCheck className="h-3.5 w-3.5 text-primary-foreground" />
+          <span className="text-xs font-medium uppercase tracking-wide text-primary-foreground/90">
+            Arizona Small Business Funding
           </span>
         </motion.div>
+
         <motion.h1
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-4xl font-extrabold leading-[1.1] tracking-tight text-primary-foreground sm:text-5xl md:text-6xl"
         >
-          <span className="text-primary-foreground drop-shadow-lg animate-[glow_3s_ease-in-out_infinite] [text-shadow:_0_0_20px_rgba(255,255,255,0.3),_0_0_40px_rgba(255,255,255,0.2)] [-webkit-text-stroke:_0.5px_rgba(255,255,255,0.3)]">
-            Find funding you can actually pursue
+          Find funding you can{" "}
+          <span className="bg-gradient-to-r from-accent to-blue-300 bg-clip-text text-transparent">
+            actually pursue
           </span>
         </motion.h1>
-        
+
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-xl md:text-2xl text-primary-foreground/90 mb-12 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-md"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mx-auto mt-6 max-w-2xl text-lg text-primary-foreground/80 md:text-xl"
         >
-          Live federal grants and reviewed Arizona opportunities, with transparent eligibility checks
+          Live federal grants, reviewed Arizona programs, and vetted small-business
+          loans in one place — with transparent eligibility checks and an AI
+          assistant to help you figure out what fits.
         </motion.p>
-        
-        {/* CTA Buttons */}
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.7 }}
-          className="flex flex-col sm:flex-row justify-center gap-4"
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-10 flex flex-col justify-center gap-4 sm:flex-row"
         >
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             asChild
-            className="text-lg px-10 py-7 bg-background text-foreground hover:bg-background/90 hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl group"
+            className="group h-14 bg-background px-8 text-base text-foreground shadow-xl transition-all duration-300 hover:bg-background/90 hover:shadow-2xl"
           >
-            <Link to="/grants" className="flex items-center gap-3">
-              Find grants
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+            <Link to="/grants" className="flex items-center gap-2">
+              Find grants & loans
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </Button>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             variant="outline"
             asChild
-            className="text-lg px-10 py-7 bg-transparent text-primary-foreground border-primary-foreground/30 hover:bg-primary-foreground/10 hover:border-primary-foreground transition-all duration-300"
+            className="h-14 border-primary-foreground/30 bg-transparent px-8 text-base text-primary-foreground hover:bg-primary-foreground/10 hover:border-primary-foreground"
           >
-            <Link to="/grants?industry=true">
-              Browse by industry
+            <Link to="/assistant" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Ask the AI assistant
             </Link>
           </Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3"
+        >
+          {trustPoints.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-2 text-sm text-primary-foreground/70">
+              <Icon className="h-4 w-4" />
+              {label}
+            </div>
+          ))}
         </motion.div>
       </div>
     </div>
