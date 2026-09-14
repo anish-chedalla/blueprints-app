@@ -48,14 +48,14 @@ test("loan catalog hides legacy claims and uses verified official URLs", async (
 });
 
 test("homepage no longer simulates subscriptions or daily verification", async () => {
-  const [capture, assurance, local] = await Promise.all([
-    read("../src/components/home/EmailCapture.tsx"),
+  const [capture, assurance, coverage] = await Promise.all([
+    read("../src/components/home/FinalCTA.tsx"),
     read("../src/components/home/AssuranceRow.tsx"),
-    read("../src/components/home/LocalCoverage.tsx"),
+    read("../src/components/home/CoverageSection.tsx"),
   ]);
   assert.doesNotMatch(capture, /TODO: Connect to backend/);
   assert.doesNotMatch(assurance, /verified daily/i);
-  assert.doesNotMatch(local, /complete coverage/i);
+  assert.doesNotMatch(coverage, /complete coverage/i);
 });
 
 test("scheduled alert worker requires a second secret and supports real email", async () => {
