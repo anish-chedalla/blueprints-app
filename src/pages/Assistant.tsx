@@ -44,7 +44,7 @@ const PHASES: PhaseCard[] = [
 
 const INITIAL_MESSAGE: Message = {
   role: "assistant",
-  content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning — for example, 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
+  content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning, for example 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
 };
 
 export default function Assistant() {
@@ -293,7 +293,7 @@ export default function Assistant() {
       // Reset local state
       setMessages([{
         role: "assistant",
-        content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning — for example, 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
+        content: "Hey there! 🚀 I'm your Launch Companion. Ready to launch your Arizona business? Tell me what you're planning, for example 'a food truck in Tucson' or 'a tech startup in Phoenix'.",
       }]);
       setCurrentPhase("plan");
       setPhases(PHASES);
@@ -308,20 +308,20 @@ export default function Assistant() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex h-[calc(100vh-4rem)] bg-muted/30">
         {/* Chat Section - Left Side */}
         <div className="flex-1 flex flex-col border-r border-border">
           {/* Header */}
-          <div className="border-b border-border bg-white/80 backdrop-blur-sm">
+          <div className="border-b border-border bg-background/80 backdrop-blur-sm">
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                    <Rocket className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                    <Rocket className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-semibold text-gray-900">Launch Companion</h1>
-                    <p className="text-sm text-gray-600">Your Arizona business startup guide</p>
+                    <h1 className="text-xl font-semibold text-foreground">Launch Companion</h1>
+                    <p className="text-sm text-muted-foreground">Your Arizona business startup guide</p>
                   </div>
                 </div>
                 <AlertDialog>
@@ -340,7 +340,7 @@ export default function Assistant() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearMemory} className="bg-red-600 hover:bg-red-700">
+                      <AlertDialogAction onClick={handleClearMemory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                         Clear Everything
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -354,8 +354,8 @@ export default function Assistant() {
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
             {isLoadingHistory && (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                <span className="ml-2 text-gray-600">Loading your conversation...</span>
+                <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                <span className="ml-2 text-muted-foreground">Loading your conversation...</span>
               </div>
             )}
             <AnimatePresence>
@@ -368,20 +368,20 @@ export default function Assistant() {
                 >
                   {message.role === "assistant" ? (
                     <div className="flex gap-3 items-start">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                        <Rocket className="w-4 h-4 text-white" />
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <Rocket className="w-4 h-4 text-primary-foreground" />
                       </div>
-                      <div className="flex-1 bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-100">
-                        <p className="text-gray-900 text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      <div className="flex-1 bg-card rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-border">
+                        <p className="text-card-foreground text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       </div>
                     </div>
                   ) : (
                     <div className="flex gap-3 justify-end items-start">
-                      <div className="flex-1 bg-blue-600 rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm max-w-[80%] ml-auto">
-                        <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      <div className="flex-1 bg-primary rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm max-w-[80%] ml-auto">
+                        <p className="text-primary-foreground text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                        <span className="text-gray-700 text-sm font-medium">You</span>
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <span className="text-muted-foreground text-sm font-medium">You</span>
                       </div>
                     </div>
                   )}
@@ -395,24 +395,24 @@ export default function Assistant() {
                 animate={{ opacity: 1 }}
                 className="flex gap-3 items-start"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 animate-pulse">
-                  <Rocket className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 animate-pulse">
+                  <Rocket className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="flex-1 bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-100">
+                <div className="flex-1 bg-card rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-border">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               </motion.div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input Bar */}
-          <div className="border-t border-border bg-white">
+          <div className="border-t border-border bg-background">
             <div className="px-6 py-4">
               <div className="flex gap-3 items-end">
                 <Input
@@ -421,13 +421,12 @@ export default function Assistant() {
                   onKeyPress={handleKeyPress}
                   placeholder="Type your message..."
                   disabled={isLoading}
-                  className="flex-1 bg-gray-50 border-gray-200"
+                  className="flex-1"
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   size="icon"
-                  className="bg-gradient-to-br from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -441,19 +440,19 @@ export default function Assistant() {
         </div>
 
         {/* Progress Section - Right Side */}
-        <div className="w-96 bg-white border-l border-border overflow-y-auto">
+        <div className="w-96 bg-background border-l border-border overflow-y-auto">
           <div className="p-6 space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Your Launch Journey</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-2">Your Launch Journey</h2>
               <Progress value={calculateProgress()} className="h-2" />
-              <p className="text-xs text-gray-600 mt-2">{phases.filter(p => p.completed).length} of {phases.length} phases completed</p>
+              <p className="text-xs text-muted-foreground mt-2">{phases.filter(p => p.completed).length} of {phases.length} phases completed</p>
             </div>
 
             <div className="space-y-3">
               {phases.map((phase, index) => {
                 const Icon = phase.icon;
                 const isActive = phase.id === currentPhase;
-                
+
                 return (
                   <motion.div
                     key={phase.id}
@@ -461,16 +460,16 @@ export default function Assistant() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className={`${isActive ? 'border-blue-500 shadow-md' : 'border-gray-200'} ${phase.completed ? 'bg-green-50' : ''}`}>
+                    <Card className={`${isActive ? 'border-accent shadow-md' : 'border-border'} ${phase.completed ? 'bg-success/10' : ''}`}>
                       <CardHeader className="pb-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            phase.completed ? 'bg-green-500' : isActive ? 'bg-blue-500' : 'bg-gray-200'
+                            phase.completed ? 'bg-success' : isActive ? 'bg-accent' : 'bg-muted'
                           }`}>
                             {phase.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-white" />
+                              <CheckCircle2 className="w-5 h-5 text-success-foreground" />
                             ) : (
-                              <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                              <Icon className={`w-5 h-5 ${isActive ? 'text-accent-foreground' : 'text-muted-foreground'}`} />
                             )}
                           </div>
                           <div className="flex-1">
@@ -486,21 +485,21 @@ export default function Assistant() {
             </div>
 
             {/* Quick Links */}
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-accent/5 border-accent/20">
               <CardHeader>
                 <CardTitle className="text-sm">Arizona Resources</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-xs">
-                <a href="https://azcc.gov/ecorp" target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline">
+                <a href="https://azcc.gov/ecorp" target="_blank" rel="noopener noreferrer" className="block text-accent hover:underline">
                   → AZ Corporation Commission
                 </a>
-                <a href="https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online" target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline">
+                <a href="https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online" target="_blank" rel="noopener noreferrer" className="block text-accent hover:underline">
                   → Apply for EIN
                 </a>
-                <a href="https://www.azcommerce.com/" target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline">
+                <a href="https://www.azcommerce.com/" target="_blank" rel="noopener noreferrer" className="block text-accent hover:underline">
                   → AZ Commerce Authority
                 </a>
-                <a href="https://azdor.gov/" target="_blank" rel="noopener noreferrer" className="block text-blue-600 hover:underline">
+                <a href="https://azdor.gov/" target="_blank" rel="noopener noreferrer" className="block text-accent hover:underline">
                   → AZ Dept of Revenue
                 </a>
               </CardContent>

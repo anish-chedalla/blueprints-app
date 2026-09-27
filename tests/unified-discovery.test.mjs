@@ -19,8 +19,8 @@ test("migration creates source-aware saves, searches, and reminders", async () =
 test("grant finder is unified and labels automation boundaries", async () => {
   const grants = await read("../src/pages/Grants.tsx");
   assert.match(grants, /Unified search/);
-  assert.match(grants, /Federal · live Grants\.gov/);
-  assert.match(grants, /Arizona · official programs/);
+  assert.match(grants, /Federal, live Grants\.gov/);
+  assert.match(grants, /Arizona, official programs/);
   assert.match(grants, /How coverage works/);
   assert.match(grants, /fetchFederalGrantDetails/);
   assert.match(grants, /matchesFundingCategory/);

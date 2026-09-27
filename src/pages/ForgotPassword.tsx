@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { AlertCircle, ArrowLeft, Building2, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { appUrl } from "@/lib/github-pages";
 import { getAuthErrorMessage, isAuthConnectivityError } from "@/lib/auth-errors";
@@ -8,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthHeader } from "@/components/AuthHeader";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -36,18 +36,19 @@ export default function ForgotPassword() {
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 px-5 py-12 text-white">
-      <section className="w-full max-w-md rounded-3xl border border-white/15 bg-white p-6 text-slate-950 shadow-2xl sm:p-8" aria-labelledby="forgot-title">
-        <Link to="/" className="mb-8 inline-flex items-center gap-2 font-semibold text-slate-900">
-          <Building2 className="h-5 w-5 text-sky-700" /> Blueprints
-        </Link>
+    <main className="min-h-screen bg-background px-5 py-5 text-foreground sm:px-8">
+      <div className="mx-auto w-full max-w-6xl">
+        <AuthHeader backTo="/auth" backLabel="Back to sign in" />
+      </div>
+      <div className="grid min-h-[calc(100vh-6rem)] place-items-center px-0 py-8">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-xl sm:p-8" aria-labelledby="forgot-title">
         <h1 id="forgot-title" className="text-3xl font-semibold tracking-tight">Reset your password</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Enter your account email and we’ll send a secure password-reset link.
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Enter your account email and we'll send a secure password-reset link.
         </p>
 
         {sent ? (
-          <Alert className="mt-6 border-emerald-200 bg-emerald-50 text-emerald-950">
+          <Alert className="mt-6 border-success/30 bg-success/10 text-success">
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>Check your email</AlertTitle>
             <AlertDescription>
@@ -59,7 +60,7 @@ export default function ForgotPassword() {
             {error && (
               <Alert variant="destructive" role="alert">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>We couldn’t send the reset email</AlertTitle>
+                <AlertTitle>We couldn't send the reset email</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -73,11 +74,8 @@ export default function ForgotPassword() {
             </Button>
           </form>
         )}
-
-        <Button asChild variant="ghost" className="mt-6 w-full">
-          <Link to="/auth"><ArrowLeft className="mr-2 h-4 w-4" />Back to sign in</Link>
-        </Button>
       </section>
+      </div>
     </main>
   );
 }

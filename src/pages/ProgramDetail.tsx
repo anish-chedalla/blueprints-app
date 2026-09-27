@@ -268,8 +268,8 @@ export default function ProgramDetail() {
                     {eligibility.verdict.replace("-", " ")}{eligibility.verdict !== "profile-needed" ? ` · ${eligibility.score}% fit` : ""}
                   </Badge>
                 </div>
-                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-emerald-700">✓ {reason}</p>)}
-                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-amber-700">! {reason}</p>)}
+                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-success">✓ {reason}</p>)}
+                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-warning">! {reason}</p>)}
                 {eligibility.missing.map((reason) => <p key={reason} className="text-sm text-muted-foreground">? {reason}</p>)}
                 <p className="mt-3 text-xs text-muted-foreground">Pre-screen only. Confirm all requirements with the funder.</p>
               </div>

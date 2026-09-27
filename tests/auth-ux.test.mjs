@@ -9,9 +9,13 @@ import {
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("auth page provides public escape routes and an inline error region", async () => {
-  const authPage = await read("src/pages/Auth.tsx");
+  const [authPage, authHeader] = await Promise.all([
+    read("src/pages/Auth.tsx"),
+    read("src/components/AuthHeader.tsx"),
+  ]);
 
-  assert.match(authPage, /Back to home/);
+  assert.match(authPage, /<AuthHeader/);
+  assert.match(authHeader, /Back to home/);
   assert.match(authPage, /Explore funding without an account/);
   assert.match(authPage, /role="alert"/);
   assert.match(authPage, /Forgot password\?/);

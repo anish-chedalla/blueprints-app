@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardLayoutProps {
@@ -35,8 +36,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header className="shrink-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-16 items-center justify-between px-6">
               <SidebarTrigger />
-              <div className="text-sm font-medium text-foreground">
-                Hi {userName}!
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-foreground">
+                  Hi {userName}!
+                </span>
+                <ThemeToggle />
               </div>
             </div>
           </header>

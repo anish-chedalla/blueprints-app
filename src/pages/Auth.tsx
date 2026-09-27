@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AuthHeader } from "@/components/AuthHeader";
 import { toast } from "sonner";
 import {
   AlertCircle,
-  ArrowLeft,
   BookmarkCheck,
   Building2,
   Eye,
@@ -150,61 +150,47 @@ export default function Auth() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-950 text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(205_65%_55%/0.18),transparent_38%),radial-gradient(circle_at_bottom_right,hsl(215_50%_35%/0.3),transparent_42%)]" />
-      <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(hsl(0_0%_100%/0.4)_1px,transparent_1px),linear-gradient(90deg,hsl(0_0%_100%/0.4)_1px,transparent_1px)] [background-size:40px_40px]" />
+    <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--accent)/0.08),transparent_38%),radial-gradient(circle_at_bottom_right,hsl(var(--primary)/0.08),transparent_42%)]" />
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-5 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between">
-          <Link to="/" className="group flex items-center gap-2.5 rounded-lg py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15 transition-colors group-hover:bg-white/15">
-              <Building2 className="h-5 w-5 text-sky-300" />
-            </span>
-            <span className="text-lg font-semibold tracking-tight">Blueprints</span>
-          </Link>
-          <Button asChild variant="ghost" className="text-slate-200 hover:bg-white/10 hover:text-white">
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to home
-            </Link>
-          </Button>
-        </header>
+        <AuthHeader />
 
         <div className="grid flex-1 items-center gap-12 py-10 lg:grid-cols-[1fr_460px] lg:py-14">
           <section className="hidden max-w-xl lg:block">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-sm font-medium text-sky-200">
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-sm font-medium text-accent">
               <ShieldCheck className="h-4 w-4" />
               Your funding workspace
             </p>
             <h1 className="text-5xl font-semibold leading-[1.08] tracking-tight">
               Keep every opportunity moving forward.
             </h1>
-            <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
+            <p className="mt-6 max-w-lg text-lg leading-8 text-muted-foreground">
               Sign in to save programs, track deadlines, and get guidance built around your business.
             </p>
-            <div className="mt-10 grid gap-5 text-slate-200 sm:grid-cols-3">
+            <div className="mt-10 grid gap-5 sm:grid-cols-3">
               <div className="space-y-2">
-                <Search className="h-5 w-5 text-sky-300" />
-                <p className="text-sm leading-6">Search official-source funding programs</p>
+                <Search className="h-5 w-5 text-accent" />
+                <p className="text-sm leading-6 text-muted-foreground">Search official-source funding programs</p>
               </div>
               <div className="space-y-2">
-                <BookmarkCheck className="h-5 w-5 text-sky-300" />
-                <p className="text-sm leading-6">Save matches and deadlines</p>
+                <BookmarkCheck className="h-5 w-5 text-accent" />
+                <p className="text-sm leading-6 text-muted-foreground">Save matches and deadlines</p>
               </div>
               <div className="space-y-2">
-                <Building2 className="h-5 w-5 text-sky-300" />
-                <p className="text-sm leading-6">Build a tailored business profile</p>
+                <Building2 className="h-5 w-5 text-accent" />
+                <p className="text-sm leading-6 text-muted-foreground">Build a tailored business profile</p>
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/15 bg-white p-6 text-slate-950 shadow-2xl shadow-black/30 sm:p-8" aria-labelledby="auth-title">
+          <section className="rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-xl sm:p-8" aria-labelledby="auth-title">
             <div className="mb-7">
-              <p className="text-sm font-semibold text-sky-700">{isSignUp ? "Create your workspace" : "Welcome back"}</p>
+              <p className="text-sm font-semibold text-accent">{isSignUp ? "Create your workspace" : "Welcome back"}</p>
               <h2 id="auth-title" className="mt-1 text-3xl font-semibold tracking-tight">
                 {isSignUp ? "Create an account" : "Sign in to Blueprints"}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {isSignUp
                   ? "Start saving funding matches and tracking your next steps."
                   : "Enter your account details to continue where you left off."}
@@ -220,14 +206,14 @@ export default function Auth() {
             )}
 
             <Button type="button" variant="outline" className="h-11 w-full" onClick={handleGoogleAuth} disabled={loading}>
-              <span aria-hidden="true" className="mr-2 text-base font-bold text-blue-600">G</span>
+              <span aria-hidden="true" className="mr-2 text-base font-bold text-accent">G</span>
               Continue with Google
             </Button>
 
             <div className="my-5 flex items-center gap-3" aria-hidden="true">
-              <span className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">or use email</span>
-              <span className="h-px flex-1 bg-slate-200" />
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">or use email</span>
+              <span className="h-px flex-1 bg-border" />
             </div>
 
             <form onSubmit={handleAuth} className="space-y-5">
@@ -248,7 +234,7 @@ export default function Auth() {
                 <div className="flex items-center justify-between gap-4">
                   <Label htmlFor="password">Password</Label>
                   {!isSignUp && (
-                    <Link to="/forgot-password" className="text-xs font-semibold text-sky-700 hover:text-sky-900 hover:underline">
+                    <Link to="/forgot-password" className="text-xs font-semibold text-accent hover:underline">
                       Forgot password?
                     </Link>
                   )}
@@ -269,13 +255,13 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500"
+                    className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {isSignUp && <p className="text-xs text-slate-500">Use 8 or more characters.</p>}
+                {isSignUp && <p className="text-xs text-muted-foreground">Use 8 or more characters.</p>}
               </div>
 
               <Button type="submit" className="h-11 w-full" disabled={loading}>
@@ -284,15 +270,15 @@ export default function Auth() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-slate-600">
+            <div className="mt-6 text-center text-sm text-muted-foreground">
               {isSignUp ? "Already have an account?" : "New to Blueprints?"}{" "}
-              <button type="button" onClick={switchMode} className="font-semibold text-sky-700 hover:text-sky-900 hover:underline">
+              <button type="button" onClick={switchMode} className="font-semibold text-accent hover:underline">
                 {isSignUp ? "Sign in" : "Create an account"}
               </button>
             </div>
 
-            <div className="mt-6 border-t border-slate-200 pt-6 text-center">
-              <Link to="/grants" className="text-sm font-medium text-slate-600 hover:text-slate-950 hover:underline">
+            <div className="mt-6 border-t border-border pt-6 text-center">
+              <Link to="/grants" className="text-sm font-medium text-muted-foreground hover:text-foreground hover:underline">
                 Explore funding without an account
               </Link>
             </div>

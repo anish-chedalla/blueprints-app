@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Shield, Calendar, Link } from "lucide-react";
+import { Shield, Calendar, Link, Coins } from "lucide-react";
 
 export const AssuranceRow = () => {
   const assurances = [
@@ -18,12 +18,17 @@ export const AssuranceRow = () => {
       title: "No sponsored ranking",
       description: "Fit scores come from your profile, never referral payments",
     },
+    {
+      icon: Coins,
+      title: "Free, no paywall",
+      description: "Full search and eligibility checks, with no subscription",
+    },
   ];
 
   return (
     <section className="py-20 bg-background">
       <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid gap-8 max-w-5xl mx-auto sm:grid-cols-2 lg:grid-cols-4">
           {assurances.map((item, i) => (
             <motion.div
               key={item.title}

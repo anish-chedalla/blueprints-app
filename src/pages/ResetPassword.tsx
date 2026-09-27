@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertCircle, Building2, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthHeader } from "@/components/AuthHeader";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -63,23 +64,24 @@ export default function ResetPassword() {
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 px-5 py-12 text-white">
-      <section className="w-full max-w-md rounded-3xl border border-white/15 bg-white p-6 text-slate-950 shadow-2xl sm:p-8" aria-labelledby="reset-title">
-        <Link to="/" className="mb-8 inline-flex items-center gap-2 font-semibold text-slate-900">
-          <Building2 className="h-5 w-5 text-sky-700" /> Blueprints
-        </Link>
+    <main className="min-h-screen bg-background px-5 py-5 text-foreground sm:px-8">
+      <div className="mx-auto w-full max-w-6xl">
+        <AuthHeader backTo="/auth" backLabel="Back to sign in" />
+      </div>
+      <div className="grid min-h-[calc(100vh-6rem)] place-items-center py-8">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-xl sm:p-8" aria-labelledby="reset-title">
         <h1 id="reset-title" className="text-3xl font-semibold tracking-tight">Choose a new password</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Use at least 8 characters that you don’t reuse elsewhere.</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Use at least 8 characters that you don't reuse elsewhere.</p>
 
         {checking ? (
-          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-slate-600" role="status">
-            <Loader2 className="h-4 w-4 animate-spin" /> Verifying reset link…
+          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status">
+            <Loader2 className="h-4 w-4 animate-spin" /> Verifying reset link...
           </div>
         ) : complete ? (
-          <Alert className="mt-6 border-emerald-200 bg-emerald-50 text-emerald-950">
+          <Alert className="mt-6 border-success/30 bg-success/10 text-success">
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>Password updated</AlertTitle>
-            <AlertDescription>Taking you back to your workspace…</AlertDescription>
+            <AlertDescription>Taking you back to your workspace.</AlertDescription>
           </Alert>
         ) : !hasSession ? (
           <Alert variant="destructive" className="mt-6" role="alert">
@@ -94,7 +96,7 @@ export default function ResetPassword() {
             {error && (
               <Alert variant="destructive" role="alert">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Couldn’t update password</AlertTitle>
+                <AlertTitle>Couldn't update password</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -113,6 +115,7 @@ export default function ResetPassword() {
           </form>
         )}
       </section>
+      </div>
     </main>
   );
 }

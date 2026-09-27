@@ -43,31 +43,41 @@ export const FeatureHighlights = () => {
           </p>
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {features.map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-            >
-              <Link
-                to={feature.href}
-                className="group flex h-full flex-col rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+        <div className="grid gap-6 md:grid-cols-2">
+          {features.map((feature, i) => {
+            const featured = i === 0;
+            return (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className={featured ? "md:col-span-2" : ""}
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                  <feature.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                <p className="mb-4 flex-1 text-sm text-muted-foreground">{feature.description}</p>
-                <span className="flex items-center gap-1 text-sm font-medium text-primary">
-                  {feature.cta}
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-                </span>
-              </Link>
-            </motion.div>
-          ))}
+                <Link
+                  to={feature.href}
+                  className={`group flex h-full flex-col rounded-xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                    featured
+                      ? "border-accent/20 bg-accent/5 hover:border-accent/40 md:flex-row md:items-center md:gap-8 md:p-8"
+                      : "border-border bg-card hover:border-primary/40"
+                  }`}
+                >
+                  <div className={`mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${featured ? "bg-accent/15" : "bg-primary/10"} ${featured ? "md:mb-0" : ""}`}>
+                    <feature.icon className={`h-6 w-6 ${featured ? "text-accent" : "text-primary"}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={featured ? "mb-2 text-lg font-semibold" : "mb-2 font-semibold"}>{feature.title}</h3>
+                    <p className="mb-4 text-sm text-muted-foreground md:mb-0">{feature.description}</p>
+                  </div>
+                  <span className={`flex shrink-0 items-center gap-1 text-sm font-medium ${featured ? "text-accent" : "text-primary"}`}>
+                    {feature.cta}
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

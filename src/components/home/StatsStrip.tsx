@@ -72,7 +72,7 @@ export const StatsStrip = () => {
               </div>
               <div>
                 <p className="text-xl font-bold leading-none md:text-2xl">
-                  {value === undefined ? "—" : value.toLocaleString()}
+                  {value === undefined ? "-" : value.toLocaleString()}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">{label}</p>
               </div>

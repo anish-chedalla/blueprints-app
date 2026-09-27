@@ -1,6 +1,8 @@
 import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { AuthHeader } from "@/components/AuthHeader";
 
 const NotFound = () => {
   const location = useLocation();
@@ -10,15 +12,21 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-gray-600">Oops! Page not found</p>
-        <Link to="/" className="text-blue-500 underline hover:text-blue-700">
-          Return to Home
-        </Link>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-6xl px-5 py-5 sm:px-8">
+        <AuthHeader />
       </div>
-    </div>
+      <div className="grid min-h-[calc(100vh-6rem)] place-items-center px-5">
+        <div className="text-center">
+          <p className="text-sm font-semibold text-accent">404</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Page not found</h1>
+          <p className="mt-2 text-muted-foreground">The page you're looking for doesn't exist or has moved.</p>
+          <Button asChild className="mt-6">
+            <Link to="/">Return to home</Link>
+          </Button>
+        </div>
+      </div>
+    </main>
   );
 };
 

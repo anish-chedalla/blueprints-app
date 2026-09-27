@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,7 +67,8 @@ export const Navbar = () => {
                 {link.label}
               </Link>
             ))}
-            
+
+            <ThemeToggle />
             {user ? (
               <Button onClick={handleSignOut} variant="outline" size="sm" className="transition-all duration-200">
                 Sign Out
@@ -104,7 +106,11 @@ export const Navbar = () => {
                 {link.label}
               </Link>
             ))}
-            
+
+            <div className="flex items-center justify-between px-4 pt-1">
+              <span className="text-sm font-medium text-muted-foreground">Theme</span>
+              <ThemeToggle />
+            </div>
             {user ? (
               <Button onClick={handleSignOut} variant="outline" size="sm" className="w-full transition-all duration-200">
                 Sign Out

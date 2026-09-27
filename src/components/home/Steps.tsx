@@ -46,12 +46,12 @@ export const Steps = () => {
               className="text-center"
             >
               <div className="mb-6 flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                  <step.icon className="w-10 h-10 text-primary" />
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                  <step.icon className="h-10 w-10 text-primary" />
+                  <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
+                    {step.number}
+                  </span>
                 </div>
-              </div>
-              <div className="text-sm font-semibold text-primary mb-2">
-                Step {step.number}
               </div>
               <h3 className="text-2xl font-bold mb-3">{step.title}</h3>
               <p className="text-muted-foreground">{step.copy}</p>

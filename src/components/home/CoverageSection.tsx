@@ -99,7 +99,7 @@ export const CoverageSection = () => {
           </div>
 
           <p className="mt-8 text-center text-xs text-muted-foreground/70">
-            We are not affiliated with these agencies — Blueprints independently indexes and
+            We are not affiliated with these agencies. Blueprints independently indexes and
             reviews their public funding notices.
           </p>
         </motion.div>

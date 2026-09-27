@@ -11,6 +11,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Building2, MapPin, Users, Briefcase, Award } from "lucide-react";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { PROFILE_BUSINESS_TYPES, PROFILE_DEMOGRAPHICS, PROFILE_INDUSTRIES } from "@/lib/profile-options";
+import { AuthHeader } from "@/components/AuthHeader";
 
 const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
 
@@ -213,7 +214,11 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--gradient-hero)" }}>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-6xl px-5 py-5 sm:px-8">
+        <AuthHeader backTo={editMode ? "/settings" : "/"} backLabel={editMode ? "Back to settings" : "Back to home"} />
+      </div>
+      <div className="flex items-center justify-center p-4">
       <div className="w-full max-w-2xl animate-scale-in">
         <Card className="border-2">
           <CardHeader>
@@ -247,6 +252,7 @@ export default function Onboarding() {
             </form>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

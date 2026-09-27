@@ -38,7 +38,7 @@ export function AppSidebar() {
       <Sidebar className="ml-2">
         <SidebarHeader>
           <div className="flex items-center gap-3 px-4 py-4">
-            <h2 className="font-bold text-xl bg-gradient-to-r from-black via-blue-100 to-blue-400 bg-clip-text text-transparent">
+            <h2 className="text-xl font-bold text-foreground">
               Blueprints
             </h2>
           </div>
@@ -49,12 +49,12 @@ export function AppSidebar() {
             {items.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild>
-                  <NavLink 
+                  <NavLink
                     to={item.url}
-                    className={({ isActive }) => 
-                      isActive 
-                        ? "text-foreground bg-transparent hover:bg-muted/50 text-base" 
-                        : "text-foreground bg-transparent hover:bg-muted/50 text-base"
+                    className={({ isActive }) =>
+                      isActive
+                        ? "bg-accent/10 text-accent font-medium text-base"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground text-base"
                     }
                   >
                     <item.icon className="w-5 h-5" />

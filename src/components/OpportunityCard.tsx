@@ -16,10 +16,10 @@ interface OpportunityCardProps {
 }
 
 const verdictStyles: Record<EligibilityResult["verdict"], { label: string; className: string; icon: typeof CheckCircle2 }> = {
-  likely: { label: "Likely match", className: "border-emerald-300 bg-emerald-50 text-emerald-800", icon: CheckCircle2 },
-  possible: { label: "Needs review", className: "border-amber-300 bg-amber-50 text-amber-800", icon: CircleHelp },
-  unlikely: { label: "Likely ineligible", className: "border-rose-300 bg-rose-50 text-rose-800", icon: TriangleAlert },
-  "profile-needed": { label: "Add profile for match", className: "border-slate-300 bg-slate-50 text-slate-700", icon: CircleHelp },
+  likely: { label: "Likely match", className: "border-success/30 bg-success/10 text-success", icon: CheckCircle2 },
+  possible: { label: "Needs review", className: "border-warning/30 bg-warning/10 text-warning", icon: CircleHelp },
+  unlikely: { label: "Likely ineligible", className: "border-destructive/30 bg-destructive/10 text-destructive", icon: TriangleAlert },
+  "profile-needed": { label: "Add profile for match", className: "border-border bg-muted text-muted-foreground", icon: CircleHelp },
 };
 
 function displayDate(value: string | null) {
@@ -30,7 +30,7 @@ function displayDate(value: string | null) {
 
 function displayMoney(min: number | null, max: number | null) {
   const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
-  if (min !== null && max !== null) return `${money(min)}–${money(max)}`;
+  if (min !== null && max !== null) return `${money(min)} - ${money(max)}`;
   if (max !== null) return `Up to ${money(max)}`;
   if (min !== null) return `From ${money(min)}`;
   return null;
@@ -51,7 +51,7 @@ export function OpportunityCard({ opportunity, eligibility, saved, saving, onSav
   };
 
   return (
-    <Card className="flex h-full flex-col border-border/70 transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+    <Card className="flex h-full flex-col border-border/70 transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg">
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-wrap gap-2">

@@ -207,8 +207,8 @@ export default function FederalGrantDetail() {
               <CardHeader><CardTitle>Your eligibility check</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <Badge variant={eligibility.verdict === "unlikely" ? "destructive" : "secondary"} className="capitalize">{eligibility.verdict.replace("-", " ")}{eligibility.verdict !== "profile-needed" ? ` · ${eligibility.score}% fit` : ""}</Badge>
-                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-emerald-700">✓ {reason}</p>)}
-                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-amber-700">! {reason}</p>)}
+                {eligibility.reasons.map((reason) => <p key={reason} className="text-sm text-success">✓ {reason}</p>)}
+                {eligibility.cautions.map((reason) => <p key={reason} className="text-sm text-warning">! {reason}</p>)}
                 {eligibility.missing.map((reason) => <p key={reason} className="text-sm text-muted-foreground">? {reason}</p>)}
                 {!profile && <Button size="sm" variant="outline" onClick={() => navigate("/auth")}>Sign in to calculate fit</Button>}
                 <p className="text-xs text-muted-foreground">This is an explainable pre-screen, not a funder decision. Confirm the complete notice before applying.</p>
