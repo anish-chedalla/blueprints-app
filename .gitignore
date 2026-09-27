@@ -17,6 +17,10 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Local Claude session notes (not for GitHub)
+.claude-local/
+CLAUDE.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
