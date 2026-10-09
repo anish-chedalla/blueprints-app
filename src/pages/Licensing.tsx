@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, ExternalLink, RotateCcw, CheckCircle2 } from "lucide-react";
+import { LICENSING_BUSINESS_TYPES, LICENSING_INDUSTRIES, generateLicensingSteps } from "@/lib/licensing-rules";
 
-const BUSINESS_TYPES = ["LLC", "Sole Proprietor", "Corporation", "Partnership", "Nonprofit"];
-const INDUSTRIES = ["technology", "retail", "services", "food service", "sustainability", "biotech", "manufacturing", "healthcare"];
+const BUSINESS_TYPES = LICENSING_BUSINESS_TYPES;
+const INDUSTRIES = LICENSING_INDUSTRIES;
 
 interface LicensingStep {
   id: string;
@@ -27,6 +28,7 @@ export default function Licensing() {
   const [businessType, setBusinessType] = useState("");
   const [steps, setSteps] = useState<LicensingStep[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfileData();
@@ -35,6 +37,7 @@ export default function Licensing() {
   const loadProfileData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    setUserId(session.user.id);
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -51,109 +54,39 @@ export default function Licensing() {
     }
   };
 
-  const generateSteps = () => {
+  const generateSteps = async () => {
     setLoading(true);
-    
-    const generatedSteps: LicensingStep[] = [];
 
-    // State-level requirements
-    generatedSteps.push({
-      id: "state-tpt",
-      title: "Register for Arizona Transaction Privilege Tax License",
-      description: "Required for all businesses making retail sales in Arizona.",
-      url: "https://azdor.gov/transaction-privilege-tax",
-      completed: false,
-    });
+    const generatedSteps = generateLicensingSteps({ city, county, industry, businessType });
 
-    // City-specific requirements
-    if (city.toLowerCase() === "phoenix") {
-      generatedSteps.push({
-        id: "city-license",
-        title: "Apply for Phoenix Business License",
-        description: "All businesses operating within Phoenix city limits must obtain a city business license.",
-        url: "https://www.phoenix.gov/pdd/business-license",
-        completed: false,
-      });
-    } else if (city) {
-      generatedSteps.push({
-        id: "city-license",
-        title: `Apply for ${city} Business License`,
-        description: `Contact ${city} city hall for specific business license requirements.`,
-        url: "https://az.gov/licensing",
-        completed: false,
-      });
+    let completedByKey = new Map<string, string | null>();
+    if (userId) {
+      const { data: checklistState } = await supabase
+        .from("licensing_checklist_state")
+        .select("step_key, completed, completed_at")
+        .eq("user_id", userId);
+      completedByKey = new Map((checklistState || []).map((row) => [row.step_key, row.completed ? row.completed_at : null]));
+
+      await supabase.from("licensing_checklist_state").upsert(
+        generatedSteps.map((step) => ({ user_id: userId, step_key: step.id, completed: false })),
+        { onConflict: "user_id,step_key", ignoreDuplicates: true },
+      );
     }
 
-    // County-specific requirements
-    if (county.toLowerCase() === "maricopa" && industry === "food service") {
-      generatedSteps.push({
-        id: "health-permit",
-        title: "Get Maricopa County Health Permit",
-        description: "Required for all food service establishments in Maricopa County.",
-        url: "https://www.maricopa.gov/1858/Food-Establishment-Licensing",
-        completed: false,
-      });
-    }
-
-    // Industry-specific requirements
-    if (industry === "food service") {
-      generatedSteps.push({
-        id: "food-handler",
-        title: "Food Handler Certification",
-        description: "All food service employees must obtain Arizona Food Handler certification.",
-        url: "https://www.azdhs.gov/preparedness/epidemiology-disease-control/food-safety-environmental-services/index.php#food-safety-home",
-        completed: false,
-      });
-    }
-
-    if (industry === "healthcare") {
-      generatedSteps.push({
-        id: "healthcare-license",
-        title: "Professional Healthcare License",
-        description: "Healthcare professionals must be licensed through the Arizona Department of Health Services.",
-        url: "https://www.azdhs.gov/licensing/index.php",
-        completed: false,
-      });
-    }
-
-    if (industry === "retail" || industry === "food service") {
-      generatedSteps.push({
-        id: "sales-tax",
-        title: "Sales Tax Permit",
-        description: "Register to collect and remit sales tax on taxable goods and services.",
-        url: "https://azdor.gov/licensing",
-        completed: false,
-      });
-    }
-
-    // Business structure requirements
-    if (businessType === "LLC" || businessType === "Corporation") {
-      generatedSteps.push({
-        id: "acc-registration",
-        title: "Register with Arizona Corporation Commission",
-        description: "All LLCs and corporations must be registered with the ACC.",
-        url: "https://azcc.gov/corporations",
-        completed: false,
-      });
-    }
-
-    // General requirements
-    generatedSteps.push({
-      id: "ein",
-      title: "Obtain Federal Employer Identification Number (EIN)",
-      description: "Required for most businesses, especially those with employees.",
-      url: "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online",
-      completed: false,
-    });
-
-    setSteps(generatedSteps);
+    setSteps(generatedSteps.map((step) => ({ ...step, completed: completedByKey.has(step.id) ? Boolean(completedByKey.get(step.id)) : false })));
     setLoading(false);
   };
 
   const toggleStep = (id: string) => {
-    setSteps(steps.map(step => 
+    setSteps(steps.map(step =>
       step.id === id ? { ...step, completed: !step.completed } : step
     ));
+    if (!userId) return;
+    const nowCompleted = !steps.find((step) => step.id === id)?.completed;
+    void supabase.from("licensing_checklist_state").upsert(
+      { user_id: userId, step_key: id, completed: nowCompleted, completed_at: nowCompleted ? new Date().toISOString() : null },
+      { onConflict: "user_id,step_key" },
+    );
   };
 
   const handleReset = () => {

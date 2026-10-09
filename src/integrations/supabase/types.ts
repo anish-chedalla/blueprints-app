@@ -81,70 +81,61 @@ export type Database = {
           },
         ]
       }
-      launch_companion_chats: {
+      journey_progress: {
         Row: {
-          content: string
+          banner_dismissed_at: string | null
+          blueprint_viewed_at: string | null
+          completed_at: string | null
           created_at: string
           id: string
-          role: string
-          session_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          role: string
-          session_id?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          role?: string
-          session_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      launch_companion_progress: {
-        Row: {
-          business_location: string | null
-          business_type: string | null
-          checklist_items: Json | null
-          completed_items: string[] | null
-          created_at: string
-          current_phase: string
-          id: string
-          phase_data: Json | null
-          session_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          business_location?: string | null
-          business_type?: string | null
-          checklist_items?: Json | null
-          completed_items?: string[] | null
+          banner_dismissed_at?: string | null
+          blueprint_viewed_at?: string | null
+          completed_at?: string | null
           created_at?: string
-          current_phase?: string
           id?: string
-          phase_data?: Json | null
-          session_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          business_location?: string | null
-          business_type?: string | null
-          checklist_items?: Json | null
-          completed_items?: string[] | null
+          banner_dismissed_at?: string | null
+          blueprint_viewed_at?: string | null
+          completed_at?: string | null
           created_at?: string
-          current_phase?: string
           id?: string
-          phase_data?: Json | null
-          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      licensing_checklist_state: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          step_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step_key?: string
           updated_at?: string
           user_id?: string
         }
@@ -162,6 +153,7 @@ export type Database = {
           employees: number | null
           id: string
           industry_tags: string[] | null
+          onboarding_completed_at: string | null
           revenue_usd: number | null
           updated_at: string
           user_id: string
@@ -178,6 +170,7 @@ export type Database = {
           employees?: number | null
           id?: string
           industry_tags?: string[] | null
+          onboarding_completed_at?: string | null
           revenue_usd?: number | null
           updated_at?: string
           user_id: string
@@ -194,6 +187,7 @@ export type Database = {
           employees?: number | null
           id?: string
           industry_tags?: string[] | null
+          onboarding_completed_at?: string | null
           revenue_usd?: number | null
           updated_at?: string
           user_id?: string

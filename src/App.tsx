@@ -21,7 +21,8 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const IdeaLab = lazy(() => import("./pages/IdeaLab"));
-const Assistant = lazy(() => import("./pages/Assistant"));
+const Journey = lazy(() => import("./pages/Journey"));
+const Blueprint = lazy(() => import("./pages/Blueprint"));
 const Saved = lazy(() => import("./pages/Saved"));
 const History = lazy(() => import("./pages/History"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -53,9 +54,14 @@ const App = () => missingSupabaseVariables.length > 0 ? (
                 <IdeaLab />
               </ProtectedRoute>
             } />
-            <Route path="/assistant" element={
+            <Route path="/journey" element={
               <ProtectedRoute>
-                <Assistant />
+                <Journey />
+              </ProtectedRoute>
+            } />
+            <Route path="/blueprint" element={
+              <ProtectedRoute>
+                <Blueprint />
               </ProtectedRoute>
             } />
             <Route path="/saved" element={

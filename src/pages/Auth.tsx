@@ -23,11 +23,11 @@ import { getAuthErrorMessage, isAuthConnectivityError } from "@/lib/auth-errors"
 async function checkProfileComplete(userId: string) {
   const { data } = await supabase
     .from("profiles")
-    .select("business_name")
+    .select("business_name, onboarding_completed_at")
     .eq("user_id", userId)
     .single();
 
-  return Boolean(data?.business_name);
+  return Boolean(data?.onboarding_completed_at || data?.business_name);
 }
 
 export default function Auth() {

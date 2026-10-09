@@ -279,8 +279,8 @@ the primary navigation.
    supabase functions deploy process-alerts
    ```
 
-   Deploy `chat-assistant`, `analyze-idea`, or `launch-companion` separately only if you intentionally
-   expose those legacy routes.
+   Deploy `chat-assistant` or `analyze-idea` separately only if you intentionally expose those
+   legacy routes.
 
 3. **Optional email alerts:** configure a verified sender with Resend and protect the scheduled worker:
    ```bash

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { JourneyBanner } from "@/components/JourneyBanner";
 import { VERIFIED_LOAN_FALLBACK } from "@/data/verified-loans";
 import { searchFederalGrants } from "@/lib/grants-gov";
 import { isProgramAvailable } from "@/lib/program-availability";
@@ -98,6 +99,8 @@ export default function Dashboard() {
         <p className="mb-8 max-w-2xl text-xl text-muted-foreground">Search official funding sources, understand eligibility, and return to opportunities you have actually reviewed.</p>
         <div className="flex flex-wrap gap-3"><Button size="lg" asChild><Link to="/grants">Explore Grants<ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button size="lg" variant="outline" asChild><Link to="/settings?tab=business"><Lightbulb className="mr-2 h-4 w-4" />Review Match Profile</Link></Button></div>
       </section>
+
+      <JourneyBanner />
 
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4" aria-label="Funding summary">
         {stats.map(({ label, value, detail, icon: Icon }) => <Card key={label} className="border-border/50 bg-card/60 backdrop-blur-sm"><CardHeader className="space-y-4"><div className="flex h-12 w-12 items-center justify-center rounded-lg border bg-background/50"><Icon className="h-6 w-6 text-primary" /></div><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className="text-4xl font-bold">{value.toLocaleString()}</p><p className="text-sm text-muted-foreground">{detail}</p></div></CardHeader></Card>)}

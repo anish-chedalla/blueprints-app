@@ -93,13 +93,14 @@ export default function Onboarding() {
         years_in_business: optionalNumber(formData.yearsInBusiness),
         industry_tags: formData.industryTags,
         demographics: formData.demographics,
+        ...(editMode ? {} : { onboarding_completed_at: new Date().toISOString() }),
       };
 
       const { error } = await supabase.from("profiles").upsert(profileData);
 
       if (error) throw error;
       toast.success("Profile saved successfully!");
-      navigate(editMode ? "/grants" : "/dashboard");
+      navigate(editMode ? "/grants" : "/journey");
     } catch (error) {
       toast.error("Failed to save profile");
     }

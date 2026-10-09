@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { savedRowToOpportunity } from "@/lib/opportunities";
 import { recordOpportunityView } from "@/lib/view-history";
+import { PIPELINE_STAGES } from "@/lib/pipeline";
 import type { User } from "@supabase/supabase-js";
 import { BellRing, Bookmark, CalendarClock, ExternalLink, MailCheck, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,7 +22,7 @@ type SavedRow = Tables<"saved_opportunities">;
 type ReminderRow = Tables<"opportunity_reminders">;
 type SearchRow = Tables<"saved_searches">;
 type DeliveryRow = Tables<"alert_deliveries">;
-const PIPELINE = ["saved", "researching", "applying", "submitted", "awarded", "declined"];
+const PIPELINE = PIPELINE_STAGES;
 
 export default function Saved() {
   const navigate = useNavigate();
