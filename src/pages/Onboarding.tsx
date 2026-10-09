@@ -1,39 +1,34 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, MapPin, Users, Briefcase, Award } from "lucide-react";
 import type { TablesInsert } from "@/integrations/supabase/types";
-import { PROFILE_BUSINESS_TYPES, PROFILE_DEMOGRAPHICS, PROFILE_INDUSTRIES } from "@/lib/profile-options";
 import { AuthHeader } from "@/components/AuthHeader";
+import { BusinessInfoFields } from "@/components/profile/BusinessInfoFields";
+import { LocationFields } from "@/components/profile/LocationFields";
+import { IndustryDemographicsFields } from "@/components/profile/IndustryDemographicsFields";
+import { emptyProfileFormData, optionalNumber } from "@/lib/profile-form";
 
-const optionalNumber = (value: string) => value.trim() === "" ? null : Number(value);
-
+// This page is reached only via /onboarding?edit=1 (Settings, Blueprint, Idea Lab
+// "edit profile" links). First-run profile setup now happens inline on the
+// /journey page, so any other visit to this route just forwards there.
 export default function Onboarding() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editMode = searchParams.get("edit") === "1";
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    businessName: "",
-    businessType: "",
-    city: "",
-    county: "",
-    employees: "",
-    revenue: "",
-    yearsInBusiness: "",
-    industryTags: [] as string[],
-    demographics: [] as string[],
-  });
+  const justAdvancedAt = useRef(0);
+  const [formData, setFormData] = useState(emptyProfileFormData);
 
   useEffect(() => {
-    const checkExistingProfile = async () => {
+    if (!editMode) {
+      navigate("/journey", { replace: true });
+      return;
+    }
+
+    const loadExistingProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
@@ -46,9 +41,7 @@ export default function Onboarding() {
         .eq("user_id", session.user.id)
         .single();
 
-      if (profile?.business_name && !editMode) {
-        navigate("/dashboard");
-      } else if (profile) {
+      if (profile) {
         setFormData({
           businessName: profile.business_name || "",
           businessType: profile.business_type || "",
@@ -62,18 +55,19 @@ export default function Onboarding() {
         });
       }
     };
-    checkExistingProfile();
+    loadExistingProfile();
   }, [editMode, navigate]);
 
-  const toggleTag = (tag: string, field: "industryTags" | "demographics") => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].includes(tag) ? prev[field].filter(t => t !== tag) : [...prev[field], tag]
-    }));
-  };
+  if (!editMode) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The "Next" button on the second-to-last step and the "Complete Setup" submit
+    // button occupy the same screen position across the re-render, so a reflexive
+    // double-click meant for "Next" can land its second click on "Complete Setup"
+    // before the final step is ever visible. Ignore submits that land immediately
+    // after advancing to the final step so that stray click can't skip it.
+    if (Date.now() - justAdvancedAt.current < 400) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       toast.error("Please sign in first");
@@ -93,14 +87,13 @@ export default function Onboarding() {
         years_in_business: optionalNumber(formData.yearsInBusiness),
         industry_tags: formData.industryTags,
         demographics: formData.demographics,
-        ...(editMode ? {} : { onboarding_completed_at: new Date().toISOString() }),
       };
 
       const { error } = await supabase.from("profiles").upsert(profileData);
 
       if (error) throw error;
       toast.success("Profile saved successfully!");
-      navigate(editMode ? "/grants" : "/journey");
+      navigate("/grants");
     } catch (error) {
       toast.error("Failed to save profile");
     }
@@ -111,104 +104,11 @@ export default function Onboarding() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center gap-3 mb-6">
-              <Building2 className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="text-lg font-semibold">Business Information</h3>
-                <p className="text-sm text-muted-foreground">Tell us about your business</p>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input id="businessName" value={formData.businessName} onChange={(e) => setFormData({...formData, businessName: e.target.value})} placeholder="Enter your business name" required />
-            </div>
-            <div>
-              <Label htmlFor="businessType">Business Type *</Label>
-              <Select value={formData.businessType} onValueChange={(value) => setFormData({...formData, businessType: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select business type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROFILE_BUSINESS_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="employees">Number of Employees</Label>
-              <Input id="employees" type="number" min="0" value={formData.employees} onChange={(e) => setFormData({...formData, employees: e.target.value})} placeholder="e.g., 5" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="revenue">Approximate annual revenue</Label>
-                <Input id="revenue" type="number" min="0" value={formData.revenue} onChange={(e) => setFormData({...formData, revenue: e.target.value})} placeholder="e.g., 75000" />
-              </div>
-              <div>
-                <Label htmlFor="yearsInBusiness">Years in business</Label>
-                <Input id="yearsInBusiness" type="number" min="0" value={formData.yearsInBusiness} onChange={(e) => setFormData({...formData, yearsInBusiness: e.target.value})} placeholder="0 for pre-launch" />
-              </div>
-            </div>
-          </div>
-        );
+        return <BusinessInfoFields formData={formData} setFormData={setFormData} />;
       case 2:
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center gap-3 mb-6">
-              <MapPin className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="text-lg font-semibold">Location</h3>
-                <p className="text-sm text-muted-foreground">Where is your business located?</p>
-              </div>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input id="city" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} placeholder="e.g., Phoenix" />
-              </div>
-              <div>
-                <Label htmlFor="county">County</Label>
-                <Input id="county" value={formData.county} onChange={(e) => setFormData({...formData, county: e.target.value})} placeholder="e.g., Maricopa" />
-              </div>
-            </div>
-          </div>
-        );
+        return <LocationFields formData={formData} setFormData={setFormData} />;
       case 3:
-        return (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center gap-3 mb-6">
-              <Briefcase className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="text-lg font-semibold">Industry & Demographics</h3>
-                <p className="text-sm text-muted-foreground">Help us personalize your experience</p>
-              </div>
-            </div>
-            <div>
-              <Label className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4" />
-                Industries (select all that apply)
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {PROFILE_INDUSTRIES.map(({ value, label }) => (
-                  <Badge key={value} variant={formData.industryTags.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "industryTags")}>{label}</Badge>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label className="flex items-center gap-2 mb-3">
-                <Award className="h-4 w-4" />
-                Business Demographics (optional)
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {PROFILE_DEMOGRAPHICS.map(({ value, label }) => (
-                  <Badge key={value} variant={formData.demographics.includes(value) ? "default" : "outline"} className="cursor-pointer" onClick={() => toggleTag(value, "demographics")}>{label}</Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+        return <IndustryDemographicsFields formData={formData} setFormData={setFormData} />;
       default:
         return null;
     }
@@ -217,14 +117,14 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto w-full max-w-6xl px-5 py-5 sm:px-8">
-        <AuthHeader backTo={editMode ? "/settings" : "/"} backLabel={editMode ? "Back to settings" : "Back to home"} />
+        <AuthHeader backTo="/settings" backLabel="Back to settings" />
       </div>
       <div className="flex items-center justify-center p-4">
       <div className="w-full max-w-2xl animate-scale-in">
         <Card className="border-2">
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
-              <CardTitle className="text-2xl">{editMode ? "Update Match Profile" : "Complete Your Profile"}</CardTitle>
+              <CardTitle className="text-2xl">Update Match Profile</CardTitle>
               <span className="text-sm text-muted-foreground">Step {step} of {totalSteps}</span>
             </div>
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
@@ -241,7 +141,7 @@ export default function Onboarding() {
                   </Button>
                 )}
                 {step < totalSteps ? (
-                  <Button type="button" onClick={() => setStep(step + 1)} className="w-full" disabled={step === 1 && (!formData.businessName || !formData.businessType)}>
+                  <Button type="button" onClick={() => { if (step + 1 === totalSteps) justAdvancedAt.current = Date.now(); setStep(step + 1); }} className="w-full" disabled={step === 1 && (!formData.businessName || !formData.businessType)}>
                     Next
                   </Button>
                 ) : (

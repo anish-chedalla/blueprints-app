@@ -20,16 +20,6 @@ import {
 import { appUrl } from "@/lib/github-pages";
 import { getAuthErrorMessage, isAuthConnectivityError } from "@/lib/auth-errors";
 
-async function checkProfileComplete(userId: string) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("business_name, onboarding_completed_at")
-    .eq("user_id", userId)
-    .single();
-
-  return Boolean(data?.onboarding_completed_at || data?.business_name);
-}
-
 export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -49,11 +39,10 @@ export default function Auth() {
     return candidate?.startsWith("/") && !candidate.startsWith("//") ? candidate : "/dashboard";
   }, [location.search, location.state]);
 
-  const finishSignIn = useCallback(async (userId: string) => {
+  const finishSignIn = useCallback((_userId: string) => {
     if (redirecting.current) return;
     redirecting.current = true;
-    const isProfileComplete = await checkProfileComplete(userId);
-    navigate(isProfileComplete ? requestedPath : "/onboarding", { replace: true });
+    navigate(requestedPath, { replace: true });
   }, [navigate, requestedPath]);
 
   useEffect(() => {
@@ -87,14 +76,17 @@ export default function Auth() {
           email,
           password,
           options: {
-            emailRedirectTo: appUrl("onboarding"),
+            emailRedirectTo: appUrl("journey"),
           },
         });
         if (error) throw error;
 
         if (data.session) {
           toast.success("Account created successfully");
-          navigate("/onboarding", { replace: true });
+          // A fresh signup with no specific destination lands on the journey
+          // roadmap; one that was bounced here from a specific page (e.g. "sign in
+          // to save this") still returns to that page instead.
+          navigate(requestedPath === "/dashboard" ? "/journey" : requestedPath, { replace: true });
           return;
         }
 

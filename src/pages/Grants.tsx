@@ -391,7 +391,7 @@ export default function Grants() {
                 <AlertTitle>Your results are not personalized yet</AlertTitle>
                 <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
                   <span>Complete a business profile to see explainable fit scores and likely eligibility conflicts.</span>
-                  <Button size="sm" onClick={() => navigate(user ? "/onboarding" : "/auth")}>Build my match profile</Button>
+                  <Button size="sm" onClick={() => navigate(user ? "/journey" : "/auth")}>Build my match profile</Button>
                 </AlertDescription>
               </Alert>
             )}

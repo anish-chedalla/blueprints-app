@@ -1,7 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+export type ProfileRow = Tables<"profiles">;
 
 export interface JourneyStepDefinition {
-  key: "funding" | "licensing" | "pipeline" | "blueprint";
+  key: "business" | "location" | "industry" | "funding" | "licensing" | "pipeline" | "blueprint";
   title: string;
   description: string;
   href: string;
@@ -9,6 +12,27 @@ export interface JourneyStepDefinition {
 }
 
 export const JOURNEY_STEPS: JourneyStepDefinition[] = [
+  {
+    key: "business",
+    title: "Business information",
+    description: "Tell us your business name, type, and a few basics.",
+    href: "/journey",
+    cta: "Fill in business info",
+  },
+  {
+    key: "location",
+    title: "Location",
+    description: "Where is your business located? Helps surface local grants and permits.",
+    href: "/journey",
+    cta: "Add your location",
+  },
+  {
+    key: "industry",
+    title: "Industry & demographics",
+    description: "Select the industries and demographics that apply to your business.",
+    href: "/journey",
+    cta: "Select industries",
+  },
   {
     key: "funding",
     title: "Explore & save funding",
@@ -50,19 +74,25 @@ export interface JourneyStatus {
   totalCount: number;
   isComplete: boolean;
   showBanner: boolean;
+  profile: ProfileRow | null;
 }
 
 export async function getJourneyStatus(userId: string, lastSignInAt: string | null): Promise<JourneyStatus> {
-  const [savedResult, pipelineResult, licensingResult, progressResult] = await Promise.all([
+  const [profileResult, savedResult, pipelineResult, licensingResult, progressResult] = await Promise.all([
+    supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
     supabase.from("saved_opportunities").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("saved_opportunities").select("id", { count: "exact", head: true }).eq("user_id", userId).neq("pipeline_status", "saved"),
     supabase.from("licensing_checklist_state").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("journey_progress").select("*").eq("user_id", userId).maybeSingle(),
   ]);
 
+  const profile = profileResult.data;
   const progress = progressResult.data;
 
   const steps: JourneyStepStatus[] = [
+    { key: "business", completed: Boolean(profile?.business_name && profile?.business_type) },
+    { key: "location", completed: Boolean(profile?.city || profile?.county) },
+    { key: "industry", completed: Boolean(profile?.industry_tags && profile.industry_tags.length > 0) },
     { key: "funding", completed: (savedResult.count || 0) > 0 },
     { key: "licensing", completed: (licensingResult.count || 0) > 0 },
     { key: "pipeline", completed: (pipelineResult.count || 0) > 0 },
@@ -80,7 +110,12 @@ export async function getJourneyStatus(userId: string, lastSignInAt: string | nu
   const bannerDismissedAt = progress?.banner_dismissed_at;
   const showBanner = !isComplete && (!bannerDismissedAt || !lastSignInAt || bannerDismissedAt < lastSignInAt);
 
-  return { steps, completedCount, totalCount, isComplete, showBanner };
+  return { steps, completedCount, totalCount, isComplete, showBanner, profile };
+}
+
+export async function upsertProfileField(userId: string, fields: Partial<ProfileRow>): Promise<{ error: unknown }> {
+  const { error } = await supabase.from("profiles").upsert({ user_id: userId, ...fields }, { onConflict: "user_id" });
+  return { error };
 }
 
 export async function markBlueprintViewed(userId: string): Promise<void> {
