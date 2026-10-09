@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, ExternalLink, RotateCcw, CheckCircle2 } from "lucide-react";
 import { LICENSING_BUSINESS_TYPES, LICENSING_INDUSTRIES, generateLicensingSteps } from "@/lib/licensing-rules";
+import { JourneyTaskBar } from "@/components/JourneyTaskBar";
+import { notifyJourneyUpdated } from "@/lib/journeyEvents";
 
 const BUSINESS_TYPES = LICENSING_BUSINESS_TYPES;
 const INDUSTRIES = LICENSING_INDUSTRIES;
@@ -71,6 +73,7 @@ export default function Licensing() {
         generatedSteps.map((step) => ({ user_id: userId, step_key: step.id, completed: false })),
         { onConflict: "user_id,step_key", ignoreDuplicates: true },
       );
+      notifyJourneyUpdated();
     }
 
     setSteps(generatedSteps.map((step) => ({ ...step, completed: completedByKey.has(step.id) ? Boolean(completedByKey.get(step.id)) : false })));
@@ -87,6 +90,7 @@ export default function Licensing() {
       { user_id: userId, step_key: id, completed: nowCompleted, completed_at: nowCompleted ? new Date().toISOString() : null },
       { onConflict: "user_id,step_key" },
     );
+    notifyJourneyUpdated();
   };
 
   const handleReset = () => {
@@ -101,6 +105,7 @@ export default function Licensing() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12">
           <div className="max-w-4xl mx-auto animate-fade-in">
+            <JourneyTaskBar stepKey="licensing" />
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold mb-3">Arizona Business Licensing</h1>
               <p className="text-muted-foreground text-lg">Find the licenses and permits you need to operate legally</p>

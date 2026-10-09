@@ -1,6 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { FilterPanel, type ProgramFilters } from "@/components/FilterPanel";
 import { ProgramCard } from "@/components/ProgramCard";
+import { JourneyTaskBar } from "@/components/JourneyTaskBar";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExternalLink, Search, ShieldCheck } from "lucide-react";
@@ -111,6 +112,7 @@ export default function Loans() {
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8">
+        <JourneyTaskBar stepKey="funding" />
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Loan Finder</h1>
           <p className="text-xl text-muted-foreground mb-6">

@@ -12,6 +12,8 @@ import type { Tables } from "@/integrations/supabase/types";
 import { savedRowToOpportunity } from "@/lib/opportunities";
 import { recordOpportunityView } from "@/lib/view-history";
 import { PIPELINE_STAGES } from "@/lib/pipeline";
+import { JourneyTaskBar } from "@/components/JourneyTaskBar";
+import { notifyJourneyUpdated } from "@/lib/journeyEvents";
 import type { User } from "@supabase/supabase-js";
 import { BellRing, Bookmark, CalendarClock, ExternalLink, MailCheck, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -76,7 +78,10 @@ export default function Saved() {
   const updateStatus = async (id: string, pipelineStatus: string) => {
     const { error } = await supabase.from("saved_opportunities").update({ pipeline_status: pipelineStatus }).eq("id", id);
     if (error) toast.error("Could not update pipeline status");
-    else setSaved((items) => items.map((item) => item.id === id ? { ...item, pipeline_status: pipelineStatus } : item));
+    else {
+      setSaved((items) => items.map((item) => item.id === id ? { ...item, pipeline_status: pipelineStatus } : item));
+      notifyJourneyUpdated();
+    }
   };
   const removeSaved = async (id: string) => {
     const { error } = await supabase.from("saved_opportunities").delete().eq("id", id);
@@ -124,6 +129,7 @@ export default function Saved() {
   return (
     <DashboardLayout>
       <main className="container mx-auto px-4 py-8">
+        <JourneyTaskBar stepKey="pipeline" />
         <header className="mb-8"><div className="flex items-center gap-3"><Bookmark className="h-8 w-8 text-primary" /><h1 className="text-4xl font-bold">Saved grants & loans</h1></div><p className="mt-2 text-lg text-muted-foreground">Keep promising funding in one place, add reminders, and update each item's progress.</p></header>
         {dueReminders.length > 0 && <Alert className="mb-6 border-warning/30 bg-warning/10"><BellRing className="h-4 w-4" /><AlertTitle>{dueReminders.length} reminder{dueReminders.length === 1 ? " is" : "s are"} due</AlertTitle><AlertDescription>Open the Alerts tab to review or dismiss them.</AlertDescription></Alert>}
         <Tabs defaultValue="all" className="space-y-6">

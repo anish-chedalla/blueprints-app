@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { curatedProgramToOpportunity, serializeOpportunity } from "@/lib/opportunities";
 import { recordOpportunityView } from "@/lib/view-history";
+import { notifyJourneyUpdated } from "@/lib/journeyEvents";
 
 interface ProgramCardProps {
   program: {
@@ -60,6 +61,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
 
         if (error) throw error;
         toast.success("Removed from saved funding");
+        notifyJourneyUpdated();
       } else {
         const opportunity = curatedProgramToOpportunity(program as Parameters<typeof curatedProgramToOpportunity>[0]);
         const { error } = await supabase
@@ -68,6 +70,7 @@ export const ProgramCard = ({ program, isFavorite = false, onFavoriteToggle, ext
 
         if (error) throw error;
         toast.success("Saved to your funding list");
+        notifyJourneyUpdated();
       }
       onFavoriteToggle?.();
     } catch (error) {

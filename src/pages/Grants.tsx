@@ -1,4 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { JourneyTaskBar } from "@/components/JourneyTaskBar";
+import { notifyJourneyUpdated } from "@/lib/journeyEvents";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -199,11 +201,13 @@ export default function Grants() {
         if (error) throw error;
         setSavedKeys((current) => { const next = new Set(current); next.delete(opportunity.key); return next; });
         toast.success("Removed from saved funding");
+        notifyJourneyUpdated();
       } else {
         const { error } = await supabase.from("saved_opportunities").upsert({ ...serializeOpportunity(opportunity), user_id: user.id }, { onConflict: "user_id,source,external_id" });
         if (error) throw error;
         setSavedKeys((current) => new Set(current).add(opportunity.key));
         toast.success("Saved to your funding list");
+        notifyJourneyUpdated();
       }
     } catch (error) { console.error(error); toast.error("Could not update this opportunity"); }
     finally { setSavingKey(null); }
@@ -226,6 +230,7 @@ export default function Grants() {
   return (
     <DashboardLayout>
       <main className="container mx-auto px-4 py-8">
+        <JourneyTaskBar stepKey="funding" />
         <header className="mb-7 max-w-4xl">
           <Badge variant="secondary" className="mb-3">Arizona-first, official-source search</Badge>
           <h1 className="text-4xl font-bold">Find grants your business can actually pursue</h1>

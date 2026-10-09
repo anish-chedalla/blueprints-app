@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getJourneyStatus } from "@/lib/journey";
+import { onJourneyUpdated } from "@/lib/journeyEvents";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
@@ -37,7 +38,8 @@ export function AppSidebar() {
       if (active) setJourneyBadge(status.isComplete ? null : `${status.completedCount}/${status.totalCount}`);
     };
     void loadJourneyStatus();
-    return () => { active = false; };
+    const unsubscribe = onJourneyUpdated(() => void loadJourneyStatus());
+    return () => { active = false; unsubscribe(); };
   }, []);
 
   const handleSignOut = async () => {

@@ -147,6 +147,11 @@ export default function Journey() {
               );
             }
 
+            // Funding/licensing/pipeline no longer repeat their explanation here —
+            // it's shown as a goal popup on the destination page itself instead,
+            // right where it's actually relevant. Blueprint has no such popup
+            // (it's the finale, not a task), so it keeps its one-liner.
+            const showDescription = step.key === "blueprint";
             return (
               <Card key={step.key} className={completed ? "border-success/30 bg-success/5" : ""}>
                 <CardHeader>
@@ -155,7 +160,7 @@ export default function Journey() {
                       {completed ? <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-success" /> : <Circle className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />}
                       <div>
                         <CardTitle className="text-lg">{index + 1}. {step.title}</CardTitle>
-                        <CardDescription className="mt-1">{step.description}</CardDescription>
+                        {showDescription && <CardDescription className="mt-1">{step.description}</CardDescription>}
                       </div>
                     </div>
                     <Button asChild variant={completed ? "outline" : "default"} size="sm" className="shrink-0">
